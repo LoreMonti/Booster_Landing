@@ -48,9 +48,16 @@ p.I  = 4.8e6;           % pitch moment of inertia [kg m^2]          [estimate]
 p.deltaMax  = deg2rad(5);   % gimbal limit [rad]
 p.deltaRate = deg2rad(10);  % gimbal rate limit [rad/s]
 
-% Initial state at the start of the terminal phase
-p.z0  = 5000;       % altitude above the pad [m]
-p.vz0 = -280;       % vertical velocity, positive up [m/s]; terminal
+% Initial state at the start of the terminal phase.
+% theta is measured from the vertical, positive when the vehicle leans
+% towards +x; delta > 0 turns the thrust towards +x.
+p.x0     = 0;       % horizontal position, pad at x = 0 [m]
+p.z0     = 5000;    % altitude above the pad [m]
+p.vx0    = 0;       % horizontal velocity [m/s]
+p.vz0    = -280;    % vertical velocity, positive up [m/s]; terminal
                     % velocity at 5 km is ~320 m/s for these values
+p.theta0 = 0;       % pitch angle [rad]
+p.q0     = 0;       % pitch rate [rad/s]
+p.delta  = 0;       % constant gimbal command of the open-loop step 1 models [rad]
 
 end
