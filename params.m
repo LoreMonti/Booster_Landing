@@ -6,24 +6,51 @@ function p = params()
 %   literal numbers, so a study (e.g. the Monte Carlo of step 5) only has
 %   to change this struct.
 %
-%   Values marked PROVISIONAL are round numbers for building and testing
-%   the vertical channel (step 1a). They will be replaced by values taken
-%   from public data on 10-30 t first stages (step 1b).
+%   Vehicle: a Falcon 9-class first stage in its landing burn, one
+%   Merlin 1D engine lit. It is representative, not a replica: values
+%   marked [public] come from public sources, values marked [estimate]
+%   are derived here (see the comments) and are dispersed in step 5.
+%
+%   Sources:
+%     [1] Wikipedia, "SpaceX Merlin" (Merlin 1D thrust, throttle, Isp).
+%     [2] Wikipedia, "Falcon 9 Full Thrust" (diameter, length).
+%     [3] Spaceflight101, "Falcon 9 v1.1 & F9R" (inert mass with legs).
 
 % Environment
-p.g0 = 9.80665;     % standard gravity, used in the rocket equation [m/s^2]
-p.g  = 9.80665;     % local gravity at the landing site [m/s^2]
+p.g0   = 9.80665;   % standard gravity, used in the rocket equation [m/s^2]
+p.g    = 9.80665;   % local gravity at the landing site [m/s^2]
+p.rho0 = 1.225;     % sea-level air density [kg/m^3]
+p.H    = 8500;      % scale height of the exponential atmosphere [m]
 
-% Propulsion (PROVISIONAL)
-p.Isp = 280;        % sea-level specific impulse [s]
-p.T   = 400e3;      % constant thrust used by the step 1a models [N]
+% Propulsion: one Merlin 1D at sea level
+p.Tmax = 845e3;         % maximum thrust [N]                        [public, 1]
+p.Tmin = 0.40*p.Tmax;   % minimum throttle 40 % (sources: 40-57 %)  [public, 1]
+p.Isp  = 282;           % specific impulse [s]                      [public, 1]
+p.T    = p.Tmax;        % constant thrust command of the open-loop step 1 models [N]
 
-% Mass (PROVISIONAL)
-p.m0   = 25e3;      % mass at ignition of the landing burn [kg]
-p.mdry = 20e3;      % dry mass: the burn must end above this [kg]
+% Mass
+p.mdry = 25.6e3;    % inert mass with legs and grid fins [kg]      [public, 3]
+p.m0   = 32e3;      % mass at landing-burn ignition [kg]           [estimate]
+                    % rocket equation with dv ~ 600 m/s (280 m/s braking
+                    % plus ~30 s of gravity loss): m0/mf = exp(600/2766) ~ 1.24
 
-% Initial state of the vertical channel (PROVISIONAL)
-p.z0  = 1000;       % altitude above the pad [m]
-p.vz0 = -100;       % vertical velocity, positive up [m/s]
+% Geometry, inertia and aerodynamics
+p.L  = 42;              % stage length [m]                          [public, 2]
+p.d  = 3.66;            % stage diameter [m]                        [public, 2]
+p.A  = pi*p.d^2/4;      % reference area for drag [m^2]
+p.CD = 0.8;             % axial drag coefficient, base first        [estimate]
+p.l  = 16;              % gimbal-to-centre-of-mass distance [m]     [estimate]
+                        % 6 t of engines at 1 m + 19.6 t uniform over 42 m
+p.I  = 4.8e6;           % pitch moment of inertia [kg m^2]          [estimate]
+                        % same mass split: rod + parallel-axis terms
+
+% Actuators (assumed, used from step 2)
+p.deltaMax  = deg2rad(5);   % gimbal limit [rad]
+p.deltaRate = deg2rad(10);  % gimbal rate limit [rad/s]
+
+% Initial state at the start of the terminal phase
+p.z0  = 5000;       % altitude above the pad [m]
+p.vz0 = -280;       % vertical velocity, positive up [m/s]; terminal
+                    % velocity at 5 km is ~320 m/s for these values
 
 end

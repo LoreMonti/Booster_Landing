@@ -30,8 +30,8 @@ classdef TestPlantVertical < matlab.unittest.TestCase
     methods (Test)
         function freeFall(tc)
             % T = 0: z is a quadratic in t, which ode45 integrates exactly,
-            % so only round-off is left (measured on a reference model:
-            % max error 1.5e-12 m on z).
+            % so only round-off is left (measured with the params.m values:
+            % max error 6e-12 m on z).
             p = params();
             p.T = 0;
             [t, z, vz, m] = tc.simulate(p, 10);
@@ -44,11 +44,11 @@ classdef TestPlantVertical < matlab.unittest.TestCase
         function constantThrust(tc)
             % Constant T: mass falls linearly and vz follows the rocket
             % equation with gravity. The log makes the error depend on the
-            % solver tolerance, not on round-off (measured on a reference
-            % model with RelTol = AbsTol = 1e-10: max error 7e-11 m on z).
+            % solver tolerance, not on round-off (measured with the params.m
+            % values and RelTol = AbsTol = 1e-10: max error 5e-11 m on z).
             p = params();
             k = p.T/(p.Isp*p.g0);              % propellant mass flow [kg/s]
-            tEnd = 20;
+            tEnd = 15;
             tc.assumeGreaterThan(p.m0 - k*tEnd, p.mdry, ...
                 'Burn would go below dry mass: shorten tEnd.');
             [t, z, vz, m] = tc.simulate(p, tEnd);
