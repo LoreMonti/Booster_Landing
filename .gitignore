@@ -9,7 +9,7 @@ codegen/
 *.asv
 *.m~
 
-# Generated results: figures and data are rebuilt by the run script
+# Generated data, rebuilt by run_all (figures/ is tracked: the README shows it)
 results/
 
 .DS_Store
