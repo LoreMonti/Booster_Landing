@@ -1,0 +1,15 @@
+# Simulink build and cache files, regenerated on every simulation
+slprj/
+*.slxc
+*.mexmaca64
+codegen/
+
+# Editor backups
+*.autosave
+*.asv
+*.m~
+
+# Generated results: figures and data are rebuilt by the run script
+results/
+
+.DS_Store
