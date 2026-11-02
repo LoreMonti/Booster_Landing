@@ -59,6 +59,19 @@ p.KpAtt   = p.wnAtt^2;              % [1/s^2]
 p.KdAtt   = 2*p.zetaAtt*p.wnAtt;    % [1/s]
 p.thetaRef = 0;                     % pitch reference of the step 2 models [rad]
 
+% Vertical guidance (step 3): constant-deceleration law in feedback.
+% aReq = (vz^2 - vTouch^2)/(2*z) is the constant deceleration that brings
+% the stage to vTouch at z = 0. The engine lights when aReq reaches
+% aStar = eta*(Tmax/m0 - g) and then commands T = m*(g + aReq), clipped
+% to [Tmin, Tmax]. eta < 1 keeps throttle margin for dispersions: with
+% eta = 1 a 3 % thrust or mass error ends in a ~75 m/s impact.
+p.eta    = 0.7;                             % planned fraction of the maximum deceleration [-]
+p.aStar  = p.eta*(p.Tmax/p.m0 - p.g);       % ignition deceleration threshold [m/s^2]
+p.aOff   = 0.1*p.aStar;                     % engine-off threshold of the relay [m/s^2]
+p.vTouch = 1;                               % target touchdown speed [m/s]
+p.zMin   = 0.05;                            % altitude floor in aReq, avoids 0/0 at touchdown [m]
+p.kT     = 1;                               % actual/commanded thrust (1 = no thrust error) [-]
+
 % Initial state at the start of the terminal phase.
 % theta is measured from the vertical, positive when the vehicle leans
 % towards +x; delta > 0 turns the thrust towards +x.
