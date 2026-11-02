@@ -11,8 +11,9 @@ classdef TestPlant3DOF < matlab.unittest.TestCase
 %   torque sign, missing 1/2 or a drag that pushes instead of brakes.
 %
 %   Model interface expected by the tests:
-%     - parameters read from the struct p (see params.m), thrust command
-%       p.T and gimbal command p.delta;
+%     - parameters read from the struct p (see params.m);
+%     - root Inports 1-2 = thrust T [N] and gimbal angle delta [rad], fed
+%       here with the constant commands p.T and p.delta;
 %     - root Outports 1-7 = x, z, vx, vz, theta, q, m (SI units, rad).
 %
 %   Run from the repository root:  runtests('tests')
@@ -117,6 +118,7 @@ classdef TestPlant3DOF < matlab.unittest.TestCase
         function s = simulate(tc, p, tEnd)
             in = Simulink.SimulationInput(tc.Model);
             in = in.setVariable('p', p);
+            in = in.setExternalInput([0 p.T p.delta; tEnd p.T p.delta]);
             in = in.setModelParameter('Solver', 'ode45', ...
                 'RelTol', num2str(tc.RelTol), 'AbsTol', num2str(tc.AbsTol), ...
                 'StopTime', num2str(tEnd), 'SaveOutput', 'on', ...
