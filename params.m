@@ -72,6 +72,12 @@ p.vTouch = 1;                               % target touchdown speed [m/s]
 p.zMin   = 0.05;                            % altitude floor in aReq, avoids 0/0 at touchdown [m]
 p.kT     = 1;                               % actual/commanded thrust (1 = no thrust error) [-]
 
+% Touchdown requirements (PROJECT_BRIEF.md, section 2)
+p.req.vz    = 2;            % |vertical speed| [m/s]
+p.req.vx    = 1;            % |horizontal speed| [m/s]
+p.req.theta = deg2rad(5);   % |tilt| [rad]
+p.req.x     = 10;           % |distance from the pad| [m]
+
 % Initial state at the start of the terminal phase.
 % theta is measured from the vertical, positive when the vehicle leans
 % towards +x; delta > 0 turns the thrust towards +x.
