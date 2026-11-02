@@ -47,7 +47,7 @@ p.I  = 4.8e6;           % pitch moment of inertia [kg m^2]          [estimate]
 % Actuators (assumed, used from step 2)
 p.deltaMax  = deg2rad(5);   % gimbal limit [rad]
 p.deltaRate = deg2rad(10);  % gimbal rate limit [rad/s]
-p.tauAct    = 0.1;          % gimbal lag, used only in the linear margin analysis [s]
+p.tauAct    = 0.1;          % gimbal servo time constant (first-order lag) [s]
 
 % Attitude loop (step 2): PD on the commanded pitch acceleration, then
 % delta = -thetaddot_cmd * I/(T*l), so the closed loop
