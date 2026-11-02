@@ -13,3 +13,6 @@ if ~exist(figDir, 'dir'), mkdir(figDir); end
 % Step 1: the open-loop plant
 study_plant_validation(figDir);
 study_openloop(figDir);
+
+% Step 2: the pitch loop
+study_attitude(figDir);
