@@ -47,6 +47,17 @@ p.I  = 4.8e6;           % pitch moment of inertia [kg m^2]          [estimate]
 % Actuators (assumed, used from step 2)
 p.deltaMax  = deg2rad(5);   % gimbal limit [rad]
 p.deltaRate = deg2rad(10);  % gimbal rate limit [rad/s]
+p.tauAct    = 0.1;          % gimbal lag, used only in the linear margin analysis [s]
+
+% Attitude loop (step 2): PD on the commanded pitch acceleration, then
+% delta = -thetaddot_cmd * I/(T*l), so the closed loop
+% s^2 + Kd*s + Kp is the same at every throttle setting.
+% wn = 1 rad/s keeps a 5 deg error within the authority at Tmin.
+p.wnAtt   = 1;                      % attitude natural frequency [rad/s]
+p.zetaAtt = 0.7;                    % attitude damping ratio [-]
+p.KpAtt   = p.wnAtt^2;              % [1/s^2]
+p.KdAtt   = 2*p.zetaAtt*p.wnAtt;    % [1/s]
+p.thetaRef = 0;                     % pitch reference of the step 2 models [rad]
 
 % Initial state at the start of the terminal phase.
 % theta is measured from the vertical, positive when the vehicle leans
