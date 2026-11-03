@@ -16,3 +16,6 @@ study_openloop(figDir);
 
 % Step 2: the pitch loop
 study_attitude(figDir);
+
+% Step 3: the guided landing
+study_landing(figDir);
