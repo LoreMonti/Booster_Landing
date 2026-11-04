@@ -19,49 +19,12 @@ function mc = study_montecarlo(figDir, n)
 
 p0 = params();
 if nargin < 2, n = p0.mc.n; end
-rng(p0.mc.seed);
 
-% Draws
-d.kT     = 1 + p0.mc.kT*randn(n, 1);
-d.Isp    = p0.Isp*(1 + p0.mc.IspRel*randn(n, 1));
-d.m0     = p0.m0 + p0.mc.m0*randn(n, 1);
-d.CD     = max(p0.CD*(1 + p0.mc.CDRel*randn(n, 1)), 0.1);
-d.wind   = p0.mc.wind*randn(n, 1);
-d.x0     = p0.mc.x0*randn(n, 1);
-d.vx0    = p0.mc.vx0*randn(n, 1);
-d.vz0    = p0.vz0 + p0.mc.vz0*randn(n, 1);
-d.theta0 = p0.mc.theta0*randn(n, 1);
-fields = fieldnames(d);
-
-in(n) = Simulink.SimulationInput('landing');
-for i = 1:n
-    p = p0;
-    for f = 1:numel(fields), p.(fields{f}) = d.(fields{f})(i); end
-    in(i) = Simulink.SimulationInput('landing');
-    in(i) = in(i).setVariable('p', p);
-    in(i) = in(i).setModelParameter('Solver', 'ode45', 'RelTol', '1e-6', 'AbsTol', '1e-6', ...
-        'StopTime', '120', 'SaveOutput', 'on', 'OutputSaveName', 'yout', 'SaveFormat', 'Dataset');
-end
 tic;
-out = sim(in, 'ShowProgress', 'off', 'ShowSimulationManager', 'off');
+[d, r] = dispersed_landings(p0, n, 1, p0.mc.seed);
 fprintf('%d landings in %.0f s\n', n, toc);
-
-% Outcomes
-[r.x, r.vx, r.vz, r.theta, r.prop, r.t, r.tilt, r.gimbal, r.ign] = deal(nan(n, 1));
-for i = 1:n
-    y = out(i).yout;
-    if isempty(y), continue; end
-    v = @(k) y{k}.Values.Data;
-    x = v(1); vx = v(3); vz = v(4); th = v(5); m = v(7); de = v(8); T = v(9);
-    r.x(i) = x(end);  r.vx(i) = vx(end);  r.vz(i) = vz(end);  r.theta(i) = th(end);
-    r.prop(i) = m(end) - p0.mdry;  r.t(i) = y{1}.Values.Time(end);
-    r.tilt(i) = max(abs(th));  r.gimbal(i) = max(abs(de));  r.ign(i) = sum(diff(T > 0) > 0);
-end
 req = p0.req;
-ok.touchdown = r.t < 120;
-ok.x = abs(r.x) < req.x;   ok.vx = abs(r.vx) < req.vx;   ok.vz = abs(r.vz) < req.vz;
-ok.theta = abs(r.theta) < req.theta;   ok.prop = r.prop > 0;
-r.success = ok.touchdown & ok.x & ok.vx & ok.vz & ok.theta & ok.prop;
+ok = r.ok;
 
 % Summary
 [pHat, lo, hi] = wilson(sum(r.success), n);
