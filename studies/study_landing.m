@@ -9,8 +9,9 @@ function summary = study_landing(figDir)
 %     figures/landing_dispersions.png velocity against altitude for all cases,
 %   prints the touchdown table and returns it.
 
-cases = {'Nominal', {}; 'Thrust -5 %', {'kT', 0.95}; 'C_D = 0.4', {'CD', 0.4}; ...
-         'C_D = 1.2', {'CD', 1.2}; 'I_{sp} -5 %', {'Isp', 0.95*282}};
+cases = {'Nominal', {}; 'Thrust -5 %', {'kT', 0.95}; 'Thrust -10 %', {'kT', 0.90}; ...
+         'C_D = 0.4', {'CD', 0.4}; 'C_D = 1.2', {'CD', 1.2}; 'I_{sp} -5 %', {'Isp', 0.95*282}; ...
+         'Combined', {'kT', 0.95, 'CD', 0.4, 'Isp', 0.95*282}};
 p0 = params();
 runs = cell(size(cases, 1), 1);
 for i = 1:size(cases, 1)
@@ -55,8 +56,8 @@ plot(ax, h/1e3, 280, 'kp', 'MarkerSize', 12, 'MarkerFaceColor', 'k', ...
     'DisplayName', sprintf('full-thrust ignition, no drag (%.0f m)', h));
 set(ax, 'XDir', 'reverse');
 xlabel(ax, 'altitude z [km]');  ylabel(ax, 'descent speed -v_z [m/s]');
-title(ax, sprintf(['Guided descents: the engine lights later or earlier as the errors ' ...
-    'require (\\eta = %.1f)'], p0.eta));
+title(ax, sprintf(['Guided descents with drag feedforward and integral action ' ...
+    '(\\eta = %.1f, K_i = %g s^{-1})'], p0.eta, p0.KiGuid));
 legend(ax, 'Location', 'northwest');
 exportgraphics(fig, fullfile(figDir, 'landing_dispersions.png'), 'Resolution', 150);
 close(fig);
