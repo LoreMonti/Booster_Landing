@@ -21,6 +21,8 @@ p.g0   = 9.80665;   % standard gravity, used in the rocket equation [m/s^2]
 p.g    = 9.80665;   % local gravity at the landing site [m/s^2]
 p.rho0 = 1.225;     % sea-level air density [kg/m^3]
 p.H    = 8500;      % scale height of the exponential atmosphere [m]
+p.wind = 0;         % horizontal wind, constant with altitude, +x [m/s]
+                    % (drag acts on the velocity relative to the air)
 
 % Propulsion: one Merlin 1D at sea level
 p.Tmax = 845e3;         % maximum thrust [N]                        [public, 1]
@@ -104,6 +106,20 @@ Kn          = lqr(diag([1 1 1], 1), [0; 0; 0; 1], Qlat, 5.5);
 p.KlatLQR   = [Kn(1), Kn(2), p.KpAtt - Kn(3), p.KdAtt - Kn(4)]/p.KpAtt;
 p.Klat      = p.KlatLQR;                             % gains flown by landing.slx [-]
 p.thetaRefMax = deg2rad(10);                         % limit on the commanded tilt [rad]
+
+% Monte Carlo dispersions (step 5): Gaussian, 1-sigma values. The
+% guidance and the controllers keep using the nominal values above.
+p.mc.n       = 1000;                % number of landings
+p.mc.seed    = 42;                  % random seed, for reproducible results
+p.mc.kT      = 0.02;                % actual/commanded thrust [-]
+p.mc.IspRel  = 0.01;                % relative Isp error [-]
+p.mc.m0      = 300;                 % mass at ignition [kg]
+p.mc.CDRel   = 0.15;                % relative drag-coefficient error [-]
+p.mc.wind    = 5;                   % horizontal wind [m/s]
+p.mc.x0      = 20;                  % lateral position [m]
+p.mc.vx0     = 2;                   % lateral velocity [m/s]
+p.mc.vz0     = 10;                  % vertical velocity [m/s]
+p.mc.theta0  = deg2rad(1);          % tilt [rad]
 
 % Touchdown requirements (PROJECT_BRIEF.md, section 2)
 p.req.vz    = 2;            % |vertical speed| [m/s]

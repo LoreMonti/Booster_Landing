@@ -7,6 +7,7 @@ classdef TestPlant3DOF < matlab.unittest.TestCase
 %     tiltedThrust    fixed theta, g = 0, no drag -> rocket equation along theta
 %     gimbalTorque    constant T and delta        -> theta quadratic in t
 %     drag            T = 0, constant density     -> tanh approach to terminal velocity
+%     wind            body at rest in a wind      -> dragged towards the wind speed
 %   Each test catches a specific silent error: sin and cos swapped, wrong
 %   torque sign, missing 1/2 or a drag that pushes instead of brakes.
 %
@@ -101,6 +102,24 @@ classdef TestPlant3DOF < matlab.unittest.TestCase
             tc.verifyEqual(s.z,  p.z0 - vt^2/p.g*(log(cosh(p.g*s.t/vt + a)) - log(cosh(a))), ...
                 'AbsTol', 1e-8);
             tc.verifyEqual(s.m,  p.m0*ones(size(s.t)), 'AbsTol', 1e-9);
+        end
+
+        function wind(tc)
+            % A body at rest in a wind w, no gravity, no thrust, constant
+            % density: drag acts on u = vx - w only, du/dt = -kd*|u|*u,
+            % so u = u0/(1 + kd*|u0|*t) and the body is dragged towards w.
+            % A drag computed on vx instead of vx - w leaves it at rest.
+            p = params();
+            p.T = 0;  p.g = 0;  p.H = Inf;  p.vz0 = 0;  p.wind = 20;
+            tEnd = 100;
+            s = tc.simulate(p, tEnd);
+
+            kd = p.rho0*p.CD*p.A/(2*p.m0);
+            u0 = p.vx0 - p.wind;
+            c  = 1 + kd*abs(u0)*s.t;
+            tc.verifyEqual(s.vx, p.wind + u0./c, 'AbsTol', 1e-8);
+            tc.verifyEqual(s.x,  p.x0 + p.wind*s.t + sign(u0)/kd*log(c), 'AbsTol', 1e-6);
+            tc.verifyEqual(s.vz, zeros(size(s.t)), 'AbsTol', 1e-12);
         end
     end
 
