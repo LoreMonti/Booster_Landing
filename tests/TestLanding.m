@@ -5,7 +5,7 @@ classdef TestLanding < matlab.unittest.TestCase
 %                      burn (utils/hoverslam_ignition.m) stops the plant
 %                      exactly at the ground, drag off.
 %   landing            the guided landing meets every touchdown requirement
-%                      of PROJECT_BRIEF.md, nominally and with thrust,
+%                      (p.req in params.m), nominally and with thrust,
 %                      drag and Isp errors the guidance does not know about,
 %                      alone and combined;
 %                      the thrust stays in [Tmin, Tmax] while the engine

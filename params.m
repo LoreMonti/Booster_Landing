@@ -121,7 +121,7 @@ p.mc.vx0     = 2;                   % lateral velocity [m/s]
 p.mc.vz0     = 10;                  % vertical velocity [m/s]
 p.mc.theta0  = deg2rad(1);          % tilt [rad]
 
-% Touchdown requirements (PROJECT_BRIEF.md, section 2)
+% Touchdown requirements
 p.req.vz    = 2;            % |vertical speed| [m/s]
 p.req.vx    = 1;            % |horizontal speed| [m/s]
 p.req.theta = deg2rad(5);   % |tilt| [rad]

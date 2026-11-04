@@ -1,7 +1,7 @@
 # Roadmap
 
-The project was built one reviewable step at a time, following
-[PROJECT_BRIEF.md](PROJECT_BRIEF.md): each step ended with its tests passing
+The project was built one reviewable step at a time, following a written
+plan of five steps and an optional sixth: each step ended with its tests passing
 and a commit. The physics and the method behind every item are in the
 [README](README.md); this file records what was done, in what order, and what
 each step taught. The Simulink models were built by hand in the editor, one
@@ -27,7 +27,7 @@ page was reloaded: when a tool fails, check the network before the tool.
 - [x] Tests: free fall, constant thrust, reduction to the vertical channel, tilted thrust, constant gimbal torque, drag-limited fall
 - [x] `run_all.m`, the validation figure and the open-loop descents
 
-*Lesson.* The brief itself had a sign error: drag was defined with a minus
+*Lesson.* The plan itself had a sign error: drag was defined with a minus
 sign and then subtracted, so it would have pushed the stage along its
 velocity. In the model, an extra Divide block made $`\dot m = T/0`$ and an
 unquoted state name was read as a variable; dividing by $`l`$ instead of $`I`$
@@ -48,7 +48,7 @@ the bugs back into a reference model and watching them fail.
 continuous time, so the gimbal jumped to its limit at $`t = 0`$; the servo is
 now an integrator, which starts where it should. Referencing the plant raised
 a false algebraic loop until the plant was set to minimise them. A PD was
-kept instead of the brief's PID: the model has no constant pitch disturbance
+kept instead of the PID of the plan: the model has no constant pitch disturbance
 for an integral to reject.
 
 ## Step 3 — Vertical guidance
@@ -101,9 +101,9 @@ the worst nominal cases.
 
 - [ ] **Integral action on the lateral error.** The stress test shows the lateral speed failing first under wind; this is the most direct way to widen the margin.
 - [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would test whether the integral terms tolerate biased measurements.
-- [ ] **Failure injection and divert** (the brief's optional step 6): a sudden thrust loss or a sensor bias, and a retarget to a safe point.
+- [ ] **Failure injection and divert** (the optional step 6 of the plan): a sudden thrust loss or a sensor bias, and a retarget to a safe point.
 - [ ] **Throttle dynamics.** A first-order engine response would show how much of the 20 % throttle margin the guidance really has.
-- [ ] **Trajectory animation.** The brief's second key figure, one landing drawn in the plane.
+- [ ] **Trajectory animation.** The second key figure of the plan, one landing drawn in the plane.
 - [ ] **Convex-optimisation guidance** (README reference 5): the fuel-optimal landing as a benchmark for the feedback law, to measure what $`\eta = 0.7`$ costs.
 - [ ] **Out-of-plane motion.** A second lateral axis would give a true landing ellipse on the ground.
 - [ ] **Aerodynamics with angle of attack.** A pitching moment and a drag growing with the tilt, the largest simplification in the model.

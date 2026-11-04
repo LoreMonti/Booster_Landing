@@ -13,3 +13,6 @@ codegen/
 results/
 
 .DS_Store
+
+# Personal planning notes, kept local
+PROJECT_BRIEF.md

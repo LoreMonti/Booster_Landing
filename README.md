@@ -490,7 +490,7 @@ fprintf('%d of 20 landed; worst miss %.2f m\n', sum(out.success), max(abs(out.x)
 
 ```
 Booster_Landing/
-├── README.md, ROADMAP.md, LICENSE, PROJECT_BRIEF.md
+├── README.md, ROADMAP.md, LICENSE
 ├── params.m                    # every parameter, dispersion and requirement
 ├── run_all.m                   # regenerates every figure
 ├── models/
