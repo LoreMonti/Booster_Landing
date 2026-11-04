@@ -22,3 +22,6 @@ study_landing(figDir);
 
 % Step 4: lateral control, cascaded PD against LQR
 study_lateral(figDir);
+
+% Step 5: Monte Carlo dispersion analysis (about 3 minutes)
+study_montecarlo(figDir);
