@@ -81,6 +81,30 @@ p.kT     = 1;                               % actual/commanded thrust (1 = no th
 p.CDhat  = p.CD;    % drag coefficient assumed by the guidance (not dispersed) [-]
 p.KiGuid = 1;       % integral gain of the guidance [1/s]
 
+% Lateral control (step 4). With the attitude inversion, thetaddot = u
+% and xddot = a*theta (a = T/m), so [x vx a*theta a*q] is a chain of
+% four integrators driven by a*u. Both controllers are written as a
+% pitch reference for attitude_ctrl,
+%   thetaRef = -(K(1)*x + K(2)*vx)/a + K(3)*theta + K(4)*q,
+% so they share actuator, scenarios and metrics and differ only in K.
+%  - Cascaded PD: an outer loop on x (wo = 0.2 rad/s, 1/5 of the
+%    attitude loop) commands the lateral acceleration, K = [wo^2 2*zo*wo 0 0].
+%  - LQR on the normalised chain with Bryson weights (10 m, 4 m/s, 3 deg)
+%    and R chosen so that its peak pitch acceleration from a 40 m, 2 m/s
+%    error equals the PD's (0.116 rad/s^2). Converted to the same form:
+%    u = -Kn*s and u = KpAtt*(thetaRef - theta) - KdAtt*q give
+%    K = [Kn1 Kn2 KpAtt-Kn3 KdAtt-Kn4]/KpAtt.
+% On the linear model the LQR brings |x| below 1 m in 14 s, the PD in 25 s.
+p.wLatPD    = 0.2;                                   % outer-loop bandwidth of the PD [rad/s]
+p.zLatPD    = 0.9;                                   % outer-loop damping of the PD [-]
+p.KlatPD    = [p.wLatPD^2, 2*p.zLatPD*p.wLatPD, 0, 0];
+aRef        = 20;                                    % mid-burn T/m used for the weights [m/s^2]
+Qlat        = diag([1/10^2, 1/4^2, 1/(aRef*deg2rad(3))^2, 0]);
+Kn          = lqr(diag([1 1 1], 1), [0; 0; 0; 1], Qlat, 5.5);
+p.KlatLQR   = [Kn(1), Kn(2), p.KpAtt - Kn(3), p.KdAtt - Kn(4)]/p.KpAtt;
+p.Klat      = p.KlatLQR;                             % gains flown by landing.slx [-]
+p.thetaRefMax = deg2rad(10);                         % limit on the commanded tilt [rad]
+
 % Touchdown requirements (PROJECT_BRIEF.md, section 2)
 p.req.vz    = 2;            % |vertical speed| [m/s]
 p.req.vx    = 1;            % |horizontal speed| [m/s]
