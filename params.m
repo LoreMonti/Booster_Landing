@@ -71,6 +71,15 @@ p.aOff   = 0.1*p.aStar;                     % engine-off threshold of the relay 
 p.vTouch = 1;                               % target touchdown speed [m/s]
 p.zMin   = 0.05;                            % altitude floor in aReq, avoids 0/0 at touchdown [m]
 p.kT     = 1;                               % actual/commanded thrust (1 = no thrust error) [-]
+% The thrust command adds the predicted drag and an integral term:
+%   T = m*(g + aReq + aI) - Dhat,  Dhat = rho(z)*CDhat*A*vz^2/2,
+%   aI = KiGuid * integral of (aReq - aStar) while the engine runs.
+% Without Dhat the drag over-brakes the stage (34 s burn, 635 kg left
+% instead of 25 s and 1686 kg); without aI a thrust 5 % low lands at
+% 2.4 m/s, because aReq grows like 1/z when the stage falls behind plan.
+% KiGuid = 0.3 1/s relights the engine with CD = 1.2, 1 1/s does not.
+p.CDhat  = p.CD;    % drag coefficient assumed by the guidance (not dispersed) [-]
+p.KiGuid = 1;       % integral gain of the guidance [1/s]
 
 % Touchdown requirements (PROJECT_BRIEF.md, section 2)
 p.req.vz    = 2;            % |vertical speed| [m/s]

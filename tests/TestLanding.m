@@ -5,10 +5,13 @@ classdef TestLanding < matlab.unittest.TestCase
 %                      burn (utils/hoverslam_ignition.m) stops the plant
 %                      exactly at the ground, drag off.
 %   landing            the guided landing meets every touchdown requirement
-%                      of PROJECT_BRIEF.md, nominally and with a thrust,
-%                      drag or Isp error the guidance does not know about;
+%                      of PROJECT_BRIEF.md, nominally and with thrust,
+%                      drag and Isp errors the guidance does not know about,
+%                      alone and combined;
 %                      the thrust stays in [Tmin, Tmax] while the engine
 %                      runs and the engine lights exactly once.
+%   nominalEfficiency  the nominal burn keeps the planned constant
+%                      deceleration instead of being over-braked by drag.
 %
 %   Model interface expected by the tests:
 %     - parameters read from the struct p (see params.m);
@@ -24,14 +27,19 @@ classdef TestLanding < matlab.unittest.TestCase
     end
 
     properties (TestParameter)
-        % Errors unknown to the guidance (reference model: touchdown at
-        % 1.09-1.25 m/s, 361-1023 kg of propellant left).
+        % Errors unknown to the guidance, which keeps assuming kT = 1,
+        % CDhat and the nominal Isp (reference model: touchdown at
+        % 1.15-1.38 m/s, 818-2263 kg of propellant left). thrustLow is
+        % the case that fails without the integral term (2.4 m/s).
         dispersion = struct( ...
-            'nominal',   {{}}, ...
-            'thrustLow', {{'kT', 0.95}}, ...
-            'dragLow',   {{'CD', 0.4}}, ...
-            'dragHigh',  {{'CD', 1.2}}, ...
-            'ispLow',    {{'Isp', 0.95*282}})
+            'nominal',    {{}}, ...
+            'thrustLow',  {{'kT', 0.95}}, ...
+            'thrustLow10',{{'kT', 0.90}}, ...
+            'thrustHigh', {{'kT', 1.05}}, ...
+            'dragLow',    {{'CD', 0.4}}, ...
+            'dragHigh',   {{'CD', 1.2}}, ...
+            'ispLow',     {{'Isp', 0.95*282}}, ...
+            'combined',   {{'kT', 0.95, 'CD', 0.4, 'Isp', 0.95*282}})
     end
 
     methods (TestClassSetup)
@@ -78,6 +86,22 @@ classdef TestLanding < matlab.unittest.TestCase
             tc.verifyGreaterThanOrEqual(min(s.T(on)), p.kT*p.Tmin*(1 - 1e-9));
             tc.verifyLessThanOrEqual(max(s.T(on)),    p.kT*p.Tmax*(1 + 1e-9));
             tc.verifyEqual(sum(diff(on) > 0), 1, 'The engine must light exactly once.');
+        end
+    end
+
+    methods (Test)
+        function nominalEfficiency(tc)
+            % With the drag feedforward the nominal burn follows the
+            % planned constant deceleration: it lasts about
+            % (|vz| at ignition)/aStar = 25 s and leaves 1686 kg on the
+            % reference model. Without it the drag over-brakes the stage:
+            % 34 s and 635 kg.
+            p = params();
+            s = tc.simulate(p, 120);
+            on = s.T > 0;
+            burn = s.t(end) - s.t(find(on, 1));
+            tc.verifyLessThan(burn, 27);
+            tc.verifyGreaterThan(s.m(end) - p.mdry, 1500);
         end
     end
 
