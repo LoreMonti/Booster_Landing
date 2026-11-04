@@ -19,3 +19,6 @@ study_attitude(figDir);
 
 % Step 3: the guided landing
 study_landing(figDir);
+
+% Step 4: lateral control, cascaded PD against LQR
+study_lateral(figDir);
