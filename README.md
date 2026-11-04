@@ -299,7 +299,7 @@ switches on a single term of the dynamics.
 | constant thrust, upright | rocket equation with gravity | 4.5×10⁻¹¹ m (solver tolerance 10⁻¹⁰) |
 | fixed tilt, no gravity | rocket equation along $`\theta_0`$ | 7.2×10⁻¹² m |
 | constant gimbal | $`\theta = \theta_0 - \tfrac12 (T l \sin\delta / I)\,t^2`$ | 6.7×10⁻¹⁶ rad |
-| unpowered fall, constant density | $`\dot z = -v_t\tanh\!\big(g t / v_t + \operatorname{artanh}(\lvert\dot z_0\rvert / v_t)\big)`$ | 1.6×10⁻¹² m/s |
+| unpowered fall, constant density | $`\dot z = -v_t\tanh\!\big(g t / v_t + \mathrm{artanh}(\lvert\dot z_0\rvert / v_t)\big)`$ | 1.6×10⁻¹² m/s |
 | body in a wind, no gravity | $`\dot x - w = (\dot x_0 - w)/(1 + k_d\lvert\dot x_0 - w\rvert t)`$ | 9×10⁻¹⁴ m/s |
 | hoverslam ignition | lit at Tmax at $`h`$, the stage is at rest at $`t_b`$ | 4×10⁻¹⁰ m, 1.3×10⁻⁴ m/s |
 
