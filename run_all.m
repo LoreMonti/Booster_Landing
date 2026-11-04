@@ -25,3 +25,4 @@ study_lateral(figDir);
 
 % Step 5: Monte Carlo dispersion analysis (about 3 minutes)
 study_montecarlo(figDir);
+study_stress(figDir);       % dispersions scaled up to 4x (about 6 minutes)
