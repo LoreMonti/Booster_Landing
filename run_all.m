@@ -27,5 +27,8 @@ study_lateral(figDir);
 study_montecarlo(figDir);
 study_stress(figDir);       % dispersions scaled up to 4x (about 6 minutes)
 
+% Extension 4: failure injection (about 1.5 minutes)
+study_failures(figDir);
+
 % Extension 3: animation of one landing for the README (about 1 minute)
 study_animation(figDir);

@@ -22,7 +22,9 @@ thrust. It touches down 1.7 m from the centre at 1.2 m/s.*
 - **1000 of 1000** dispersed landings meet every touchdown requirement (95 %
   interval 99.6–100 %), with 99th percentiles of **1.9 m** from the pad,
   **1.3 m/s** vertical and 0.2 m/s lateral speed; with every dispersion
-  doubled, 98 % still land.
+  doubled, 98 % still land. A sudden thrust loss of **15 %** is survived at
+  any time in the burn; an altimeter that reads more than **0.13 m** high is
+  not.
 - A constant-deceleration guidance law in feedback lands at **1.2 m/s**; adding
   a drag feedforward cuts the burn from 34 s to **25 s** and leaves **1686 kg**
   of propellant instead of 635, and an integral term keeps it landing with a
@@ -340,6 +342,33 @@ The 99 % ellipse is the covariance ellipse of the touchdown state
 $`(x, \dot z)`$ scaled by $`\sqrt{\chi^2_{2}(0.99)} = 3.03`$. The stress test
 repeats the Monte Carlo with every 1σ multiplied by 1 to 4, 300 landings each.
 
+### Failure injection
+
+The dispersions above are constant through the flight. A failure is a change
+during the flight, or a measurement the controllers trust and should not.
+Three are injected into `landing.slx`, one at a time, all off by default:
+
+| Failure | Injected as | Parameters |
+|---|---|---|
+| sudden thrust loss | $`T = k_T\,(1 - f\,\mathbf{1}[t \ge t_f])\,T_{cmd}`$, a Step block after the thrust error | `p.fail.dT`, `p.fail.tT` |
+| altimeter bias | the guidance reads $`z_m = z + h_b`$ | `p.fail.zBias` |
+| lateral velocity drift | the lateral law and the observer read $`\dot x_m = \dot x + b\,t`$, the drift of an integrated accelerometer bias | `p.fail.vxDrift` |
+
+None of them is reported to the guidance. Two closed forms frame the results.
+If the stage could follow its plan after a thrust loss, it would survive any
+loss that the nominal thrust of the rest of the burn leaves room for,
+$`f \lt 1 - \max_{t \ge t_f} T(t)/T_{max}`$. With an altimeter reading $`h_b`$
+too high, the guidance brings the stage to $`u_t`$ where it believes the ground
+is, and the real ground arrives $`h_b`$ earlier, still at the planned
+deceleration $`a^*`$:
+
+```math
+v_{impact} = \sqrt{u_t^2 + 2a^*h_b} \lt v_{req} \quad\Longleftrightarrow\quad h_b \lt \frac{v_{req}^2 - u_t^2}{2a^*} = 0.13\ \mathrm{m}
+```
+
+An altimeter that reads too low stops the stage above the ground, where an
+engine that cannot hover has to cut and relight.
+
 ## Validation
 
 No model is used before it reproduces closed-form solutions, each of which
@@ -514,6 +543,42 @@ observer), so the vertical guidance becomes the limit, and no single
 dispersion dominates the failures any more. Running out of propellant appears
 only from twice the nominal dispersions.
 
+### Failures
+
+![Thrust loss](figures/failures_thrust.png)
+
+A thrust loss of up to **15 %** is survived whenever it happens, and up to
+20 % in the first 4 s after ignition and around 14 s. The static margin, the
+loss that the thrust of the rest of the burn leaves room for, is 30 %: half
+of it is spent because after the loss the stage falls behind its plan, and the
+required deceleration grows like $`u/z`$ as it approaches the ground. The
+edge of success is ragged rather than a clean band, so a single number for
+the thrust margin would overstate what is known.
+
+![Sensor faults](figures/failures_sensors.png)
+
+| Altimeter bias | −20 m | −2 m | −0.5 m | 0 | +0.1 m | +0.25 m | +1 m | +10 m |
+|---|---|---|---|---|---|---|---|---|
+| touchdown speed | 1.10 m/s | 1.36 m/s | 1.25 m/s | 1.20 m/s | 1.82 m/s | 2.61 m/s | 4.92 m/s | 15.3 m/s |
+| ignitions | 89 | 11 | 4 | 1 | 1 | 1 | 1 | 1 |
+
+A positive bias follows the closed form within 1 %: the guidance has no
+altitude margin at all, and the altimeter must be good to about 0.1 m at the
+end of the descent. A negative bias lands softly, but by switching the engine
+on and off, 4 times for half a metre and 89 times for 20 m, burning 1500 kg of
+extra propellant; a real engine allows a handful of relights at most.
+
+A drift $`b`$ of the measured lateral velocity moves the touchdown point by
+about 160 m per m/s² without the observer and 186 m per m/s² with it, so the
+requirement of 10 m holds up to 0.054 m/s² with the observer (5.5 mg if the
+drift comes from an accelerometer bias). The miss comes mostly from the
+lateral law itself: it takes the false velocity $`b\,t`$ for a real drift and
+steers against it until the position error balances it,
+$`K_1 x \approx -K_2\,b\,t`$, which gives 21 m at the 30 s touchdown for
+0.1 m/s²; the simulation gives 16 m, because the balance is never fully
+reached. The observer, which differentiates the same measurement and reads
+$`b`$ as a constant disturbance, adds 16 % to the miss.
+
 ## Discussion and limitations
 
 The guidance holds because it is in feedback: it does not need to know the
@@ -551,9 +616,18 @@ lateral law to the attitude loop: in a wind-free landing it costs 0.4 m, and a
 faster attitude loop would have to be checked again with the observer in the
 loop. It differentiates a velocity, so with real sensors its filter would set a
 trade-off between lag and noise that this model, without sensor noise, cannot
-show; a biased accelerometer or velocity would be read as a disturbance and
-cancelled, which would steer the stage off the pad. The tilt limit still
-clips its correction in the hardest cases.
+show. A drifting velocity measurement is read as a disturbance and cancelled,
+but the failure study shows that this adds only 16 % to the miss that the
+lateral law itself makes on the same measurement. The tilt limit still clips
+its correction in the hardest cases.
+
+The failure study moves the weak point from the controllers to the
+measurements. The guidance tolerates thrust errors well, 15 % lost at any
+time, because it is in feedback, but the same feedback trusts the altitude
+completely: aiming at 1 m/s exactly at $`z = 0`$ leaves no room for an altimeter
+error of more than 0.13 m. Aiming at a gate a few metres above the ground and
+descending the rest at constant speed, as real landers do, would buy that
+margin with a little propellant.
 
 The model leaves out:
 
@@ -594,7 +668,7 @@ Machine Learning Toolbox. The results were produced with MATLAB R2026b
 From the repository root in MATLAB:
 
 ```matlab
-run_all              % regenerate every study and figure (about 11 minutes)
+run_all              % regenerate every study and figure (about 13 minutes)
 runtests('tests')    % the 33 tests
 ```
 
@@ -609,6 +683,7 @@ runtests('tests')    % the 33 tests
 | `studies/study_montecarlo.m` | 1000 dispersed landings, convergence |
 | `studies/study_stress.m` | dispersions scaled 1 to 4 times |
 | `studies/study_animation.m` | the animated landing at the top of this README |
+| `studies/study_failures.m` | thrust loss against time and size, altimeter bias, velocity drift |
 
 As a library:
 

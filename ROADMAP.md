@@ -127,10 +127,30 @@ attitude; splitting the picture into a stretched overview and a true-scale
 close-up solved it. The first version drew the plume through the ground and
 kept the engine lit in the touchdown frame.
 
+## Extension 4 — Failure injection
+
+- [x] Sudden thrust loss: a Step block after the thrust error, `p.fail.dT` from `p.fail.tT` on
+- [x] Sensor group in `landing.slx`: the guidance reads $`z + h_b`$, the lateral law and the observer read $`\dot x + b\,t`$
+- [x] Tests: 15 % loss survived and 30 % crashing with the thrust capped; altimeter high against the closed form, altimeter low relighting, velocity drift missing the pad
+- [x] Study: thrust loss on a grid of time and size, altimeter bias from −20 to +20 m, velocity drift from −0.2 to 0.2 m/s²
+- [x] Results: 15 % thrust loss survived at any time against a static margin of 30 %; altimeter bias tolerated below 0.13 m; velocity drift below 0.054 m/s²
+
+*Lesson.* The hand estimates were right for the altimeter (15.3 m/s for a
+10 m bias, within 1 %) and wrong in their reasoning for the thrust loss: the
+19 % that came out of the ignition condition matched the result by
+coincidence, because the real limit is half of the 30 % static margin, spent
+falling behind the plan. The README had also predicted that a velocity drift
+would mostly fool the disturbance observer; wiring the measurement into the
+lateral law as well showed that the law itself makes most of the miss. The
+first private reference forgot that wire, and only the test that compares the
+observer on and off would have caught it.
+
 ## Possible extensions
 
 - [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would set the filter of the disturbance observer, which differentiates a velocity, and show whether it and the guidance integral tolerate biased measurements.
-- [ ] **Failure injection and divert** (the optional step 6 of the plan): a sudden thrust loss or a sensor bias, and a retarget to a safe point.
+- [ ] **Terminal gate for the altimeter.** Aim at a few metres above the ground and descend the rest at constant speed: the failure study shows that the guidance tolerates only 0.13 m of altimeter bias.
+- [ ] **Monte Carlo with random failures.** Draw the type, time and size of a failure in every run, to give a success rate with failures instead of one failure at a time.
+- [ ] **Divert.** Retarget to a safe point when a failure makes the pad unreachable.
 - [ ] **Throttle dynamics.** A first-order engine response would show how much of the 20 % throttle margin the guidance really has.
 - [ ] **Convex-optimisation guidance** (README reference 5): the fuel-optimal landing as a benchmark for the feedback law, to measure what $`\eta = 0.7`$ costs.
 - [ ] **Out-of-plane motion.** A second lateral axis would give a true landing ellipse on the ground.
