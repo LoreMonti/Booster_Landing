@@ -93,14 +93,31 @@ controllers are compared at equal effort.
 
 *Lesson.* A 100 % success rate says how often the design works, not how far
 it is from failing. Scaling the dispersions until landings failed showed the
-weak point: the lateral speed at touchdown, driven by wind, because the
-lateral loop is proportional only and the gimbal already sits at its limit in
-the worst nominal cases.
+weak point: the lateral speed at touchdown, driven by wind. The first reading
+of why, a constant wind leaving a residual drift that an integral would
+remove, was wrong; extension 2 corrects it.
+
+## Extension 2 — Lateral disturbance observer
+
+- [x] Diagnosis: the wind force follows the airspeed squared, about 0.7 m/s² early in the burn and nearly zero at the ground; with a 25 m/s wind the stage lands 7.3 m off still moving at 0.9 m/s, not settled at an offset
+- [x] Lateral integral tried on a copy of the model and rejected: it winds up during the saturated phase (33 m miss at $`K_I = 0.005`$, 105 m at 0.02); integrating only near the pad does nothing against the wind
+- [x] Observer $`\hat d = [\ddot x - (T_{cmd}/m)\sin\theta]/(\tau_d s + 1)`$ built in `landing.slx`, cancelled in `lateral_ctrl` through $`-k_d\hat d/a`$
+- [x] Tests: with a 15 m/s wind, thrust 5 % low and $`C_D = 1.2`$ the stage fails the lateral speed with the observer off and meets every requirement with it on
+- [x] Tuning: $`k_d = 1`$, $`\tau_d = 0.5`$ s, with sweeps of both on the test case and $`k_d = 0.75`$ against 1 on the dispersed landings
+- [x] Studies rerun: 99th-percentile miss 3.8 to 1.9 m; stress test 100, 99.7, 98, 94, 87, 71 %; lateral-speed failures at 2.5× from 41 to 7 of 300
+
+*Lesson.* The integral was the textbook answer to a disturbance that was
+assumed constant without checking; plotting the disturbance against time
+showed it decaying by an order of magnitude during the burn, and the test
+cases showed the integral making things worse. On the test case the observer
+overshoots the pad by 4.6 m, because its estimate lags a wind force that is
+decaying; a fraction $`k_d = 0.75`$ maximised the worst margin on that one case,
+but on the dispersed landings it was no better than 1, and a gain tuned on one
+case is tuned to that case's wind.
 
 ## Possible extensions
 
-- [ ] **Integral action on the lateral error.** The stress test shows the lateral speed failing first under wind; this is the most direct way to widen the margin.
-- [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would test whether the integral terms tolerate biased measurements.
+- [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would set the filter of the disturbance observer, which differentiates a velocity, and show whether it and the guidance integral tolerate biased measurements.
 - [ ] **Failure injection and divert** (the optional step 6 of the plan): a sudden thrust loss or a sensor bias, and a retarget to a safe point.
 - [ ] **Throttle dynamics.** A first-order engine response would show how much of the 20 % throttle margin the guidance really has.
 - [ ] **Trajectory animation.** The second key figure of the plan, one landing drawn in the plane.

@@ -18,17 +18,19 @@ miss, lateral speed and propellant left.*
 **Key results**
 
 - **1000 of 1000** dispersed landings meet every touchdown requirement (95 %
-  interval 99.6–100 %), with 99th percentiles of **3.8 m** from the pad,
-  **1.3 m/s** vertical and 0.6 m/s lateral speed; with every dispersion
-  doubled, 95 % still land, and the first requirement to fail is the lateral
-  speed, driven by wind.
+  interval 99.6–100 %), with 99th percentiles of **1.9 m** from the pad,
+  **1.3 m/s** vertical and 0.2 m/s lateral speed; with every dispersion
+  doubled, 98 % still land.
 - A constant-deceleration guidance law in feedback lands at **1.2 m/s**; adding
   a drag feedforward cuts the burn from 34 s to **25 s** and leaves **1686 kg**
   of propellant instead of 635, and an integral term keeps it landing with a
   thrust 10 % weaker than commanded.
 - With the same gimbal and the same peak effort, an **LQR** on the coupled
   lateral and pitch states lands **0.004–0.19 m** from the pad against
-  0.4–1.6 m for a cascaded PD, and closes a 30 m error 5–10 s sooner.
+  0.4–1.6 m for a cascaded PD; a **disturbance observer** that measures the
+  wind force and cancels it halves the 99th-percentile miss (3.8 to 1.9 m) and
+  cuts the lateral-speed failures under 2.5× dispersions from 41 to 7 of 300,
+  where a lateral integral wound up.
 
 ## Contents
 
@@ -167,6 +169,45 @@ for the attitude loop, then takes the form
 
 which serves both controllers compared in the results.
 
+### Wind as a lateral disturbance
+
+Everything the law above does not model enters the lateral equation as a
+disturbance per unit mass $`d`$:
+
+```math
+\ddot x = a\sin\theta + d, \qquad d = -\frac{D_x}{m} + \frac{(k_T - 1)\,T_{cmd}}{m}\sin\theta + \frac{T}{m}\big(\sin(\theta + \delta) - \sin\theta\big)
+```
+
+with $`a = T_{cmd}/m`$ the acceleration the controller believes it commands
+and $`k_T`$ the unknown ratio of actual to commanded thrust. The largest term
+is the wind drag, and it is not constant: it scales with
+$`\rho\,\lVert\mathbf v_{rel}\rVert\,(\dot x - w)`$, so it is largest early in
+the burn, when the stage falls at 290 m/s through denser air, and vanishes at
+touchdown, when the stage moves at 1 m/s. A proportional law leaves an error
+proportional to $`d`$; an integral of the lateral error would remove a
+*constant* $`d`$, but this one decays by an order of magnitude during the
+burn, so the integral keeps pushing after the disturbance is gone.
+
+Since every other term of the equation is measured or commanded, $`d`$ can
+instead be measured directly [9]: subtract from the measured lateral
+acceleration the part the controller explains, and low-pass filter the rest,
+because a derivative amplifies measurement noise,
+
+```math
+\hat d = \frac{1}{\tau_{d}\,s + 1}\left[\ddot x - \frac{T_{cmd}}{m}\sin\theta\right]
+```
+
+The lateral law then asks for the extra tilt that cancels it, $`a\,\Delta\theta = -k_d\,\hat d`$:
+
+```math
+\theta_{ref} = -\frac{K_1 x + K_2 \dot x + k_d\,\hat d}{a} + K_3\,\theta + K_4\,\dot\theta
+```
+
+$`k_d = 0`$ gives back the law of step 4. The estimate lumps every
+unmodelled lateral force together: the thrust error, and also the side force
+of the gimbal itself, $`T\delta/m`$ for small angles, which the four-integrator
+model leaves out.
+
 ## Method
 
 ### Vehicle
@@ -256,6 +297,17 @@ $`K = [K_{n1},\ K_{n2},\ K_p - K_{n3},\ K_d - K_{n4}]/K_p`$. Textbook weights
 first produced gains asking for 25 times the gimbal authority, so the
 comparison is made at equal peak effort. With the engine off the lateral
 control asks for $`\theta = 0`$, and $`\theta_{ref}`$ is limited to ±10 deg.
+
+The disturbance observer is built in `landing.slx` from a Derivative block on
+$`\dot x`$, the term $`(T_{cmd}/m)\sin\theta`$, and a first-order Transfer
+Fcn; its output is the eighth input of `lateral_ctrl`. The PD and LQR
+comparison is flown with it off, so that only the gains differ.
+
+| Choice | Value | Reason |
+|---|---|---|
+| fraction cancelled $`k_d`$ | 1 | the touchdown speed is the requirement that fails first and the one that tips a stage over; a smaller $`k_d`$ leaves part of the wind, and how much depends on a wind the controller does not know |
+| filter time constant $`\tau_d`$ | 0.5 s | a shorter filter lags the decaying wind less (3.9 m instead of 4.6 m of overshoot at 0.05 s), but the model has no sensor noise to show its cost: 0.05 m/s of noise at 10 Hz on $`\dot x`$ becomes about 3 m/s² once differentiated, which 0.5 s attenuates about 30 times and 0.05 s only 3 times |
+| thrust in the estimate | $`T_{cmd}`$ | the actual thrust is unknown; the thrust error ends up in $`\hat d`$ and is cancelled with the wind |
 
 ### Monte Carlo
 
@@ -381,24 +433,78 @@ drive the gimbal to its limit; the difference is in the tail, where the LQR's
 small feedback of $`\theta`$ and $`q`$ into the lateral law coordinates the two
 loops that the cascade keeps apart by bandwidth.
 
+### Wind: the disturbance observer
+
+![Lateral control in a wind](figures/lateral_wind.png)
+
+The case of the figure starts 30 m off the pad and drifting away at 2 m/s,
+with a 15 m/s wind, a thrust 5 % low and $`C_D = 1.2`$. Before ignition the
+wind has already pushed the stage to 55 m and 5.2 m/s. Without the observer it
+lands 7.6 m off still drifting at **1.46 m/s**, which fails the 1 m/s
+requirement; with it, it lands 4.6 m on the other side at **0.02 m/s**:
+
+| Case (LQR) | observer off | observer on |
+|---|---|---|
+| 30 m, 2 m/s, wind 15 m/s, thrust −5 %, $`C_D`$ 1.2 | 7.60 m, −1.46 m/s (fails) | −4.64 m, −0.02 m/s |
+| 30 m, wind +25 m/s | 7.28 m, −0.91 m/s | −3.13 m, 0.24 m/s |
+| 30 m, wind −25 m/s | −7.26 m, 0.85 m/s | 2.27 m, −0.05 m/s |
+| 30 m, 2 m/s, no wind | −0.02 m, −0.03 m/s | −0.44 m, 0.13 m/s |
+
+The estimate (bottom panel) follows the disturbance with the lag of its
+filter. The two trajectories coincide until 15 s because the commanded tilt
+sits at its 10 deg limit from 10 to 15 s, which clips the observer's term.
+After that, as the stage slows and the wind force decays, the estimate is
+still slightly above the actual value, so the stage is pushed past the pad:
+that is the 4.6 m on the other side. Without wind the observer costs 0.4 m,
+because it also feeds back the gimbal's own side force.
+
+Sweeping the two parameters on the same case, with the *worst margin* being
+the smaller of $`1 - \lvert x\rvert/10\,\mathrm{m}`$ and $`1 - \lvert\dot x\rvert/1\,\mathrm{m/s}`$:
+
+| $`k_d`$ | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| miss | 7.60 m | 4.71 m | 1.70 m | −1.42 m | −4.64 m |
+| lateral speed | −1.46 m/s | −1.12 m/s | −0.76 m/s | −0.40 m/s | −0.02 m/s |
+| worst margin | −46 % | −12 % | 24 % | **60 %** | 54 % |
+
+| $`\tau_d`$ | 0.05 s | 0.2 s | 0.5 s | 1 s | 2 s |
+|---|---|---|---|---|---|
+| miss | −3.88 m | −4.14 m | −4.64 m | −5.38 m | −6.43 m |
+| lateral speed | −0.01 m/s | −0.01 m/s | −0.02 m/s | −0.08 m/s | −0.27 m/s |
+
+On this single case $`k_d = 0.75`$ has the larger worst margin, because it
+under-corrects just enough to cancel the overshoot. It was not kept: the
+amount it under-corrects is a fixed fraction of a wind the controller does not
+know, so the right value changes with the wind. Flown on the dispersed
+landings, $`k_d = 0.75`$ and $`k_d = 1`$ are within two runs of each other
+under 2× and 3× dispersions (291 against 293 and 254 against 256 of 300), so
+the full cancellation was kept.
+
 ### Monte Carlo and stress test
 
 On 1000 dispersed landings (figure at the top) all succeed: 95 % interval
-99.6–100 %. At the 99th percentile the stage lands 3.84 m from the pad at
-1.28 m/s vertical and 0.59 m/s lateral speed, tilted 0.15 deg; the least
-propellant left is 582 kg. The spread of the miss settles at 1.35 m after
-300–500 runs ([`montecarlo_convergence.png`](figures/montecarlo_convergence.png)).
+99.6–100 %. At the 99th percentile the stage lands 1.88 m from the pad at
+1.28 m/s vertical and 0.21 m/s lateral speed, tilted 0.09 deg; the least
+propellant left is 583 kg. Without the observer the same draws give 3.84 m and
+0.59 m/s. The spread of the miss settles at 0.65 m after 300–500 runs
+([`montecarlo_convergence.png`](figures/montecarlo_convergence.png)), against
+1.35 m without the observer.
 
 ![Stress test](figures/stress_test.png)
 
 | Dispersions | ×1 | ×1.5 | ×2 | ×2.5 | ×3 | ×4 |
 |---|---|---|---|---|---|---|
-| success | 100 % | 99 % | 95 % | 83 % | 80 % | 57 % |
+| success, observer on | 100 % | 99.7 % | 98 % | 94 % | 87 % | 71 % |
+| success, observer off | 100 % | 99 % | 95 % | 83 % | 80 % | 57 % |
+| lateral-speed failures, on / off | 0 / 0 | 1 / 3 | 4 / 12 | 7 / 41 | 24 / 46 | 56 / 96 |
 
-At every level the first requirement to fail is the lateral speed at
-touchdown, followed by the miss distance; running out of propellant appears
-only from twice the nominal dispersions. Among the early failures the most
-extreme draw is most often the wind.
+Without the observer the lateral speed at touchdown was the first requirement
+to fail at every level, and the most extreme draw among the early failures was
+most often the wind. With it, the lateral failures drop by a factor of 2 to 6;
+from 2.5× the vertical speed fails as often (10 runs at 2.5×, unchanged by the
+observer), so the vertical guidance becomes the limit, and no single
+dispersion dominates the failures any more. Running out of propellant appears
+only from twice the nominal dispersions.
 
 ## Discussion and limitations
 
@@ -417,10 +523,29 @@ and pitch states, where the LQR's advantage is real but modest: both are four
 gains on a linear chain, and the LQR chooses them with weights in physical
 units instead of separating bandwidths.
 
-The stress test locates the weak point: the lateral loop is proportional only,
-so a constant wind leaves a residual drift, and in the worst nominal cases
-the gimbal already sits at its 5 deg limit. An integral term on the lateral
-error, or more gimbal range, would be the next step.
+The first version of this README misread the stress test. It said that a
+proportional lateral loop leaves a residual drift under a constant wind, and
+that an integral term on the lateral error was the fix. The wind is constant,
+but its force is not: it follows the airspeed squared, about 0.7 m/s² early in
+the burn and nearly zero at the ground, so with a 25 m/s wind the stage
+landed 7.3 m off still moving at 0.9 m/s, not settled at an offset. Tried on a
+copy of the model, a lateral integral wound up during the long saturated phase
+and missed the pad by 33 m ($`K_I = 0.005`$) to 105 m ($`K_I = 0.02`$); integrating
+only near the pad did not help against the wind and degraded the landings
+from a plain offset. The disturbance observer measures the force instead of
+integrating its effect, so it follows a disturbance that changes during the
+burn, and with the commanded thrust in the estimate it also absorbs the
+thrust error.
+
+The observer is not free. Its estimate contains every unmodelled lateral
+force, including the side force of the gimbal itself, so it couples the
+lateral law to the attitude loop: in a wind-free landing it costs 0.4 m, and a
+faster attitude loop would have to be checked again with the observer in the
+loop. It differentiates a velocity, so with real sensors its filter would set a
+trade-off between lag and noise that this model, without sensor noise, cannot
+show; a biased accelerometer or velocity would be read as a disturbance and
+cancelled, which would steer the stage off the pad. The tilt limit still
+clips its correction in the hardest cases.
 
 The model leaves out:
 
@@ -429,7 +554,8 @@ The model leaves out:
 - an angle-of-attack-dependent drag and the aerodynamic pitching moment;
 - throttle dynamics and the engine's response time;
 - navigation: the controllers see the true state, with no sensor noise or
-  estimator;
+  estimator, which is what keeps the differentiation inside the observer
+  harmless;
 - the change of inertia and centre of mass as propellant burns;
 - gusts and a wind profile with altitude.
 
@@ -438,8 +564,9 @@ fuel-optimal problem with thrust bounds is solved in flight by convex
 optimisation [5]; the guidance here is a simple feedback law, not an optimal
 one. What the project adds is a model checked term by term, a guidance law
 whose inefficiency and its fix are both measured, a like-for-like comparison
-of two lateral controllers, and a dispersion analysis that says where the
-design breaks.
+of two lateral controllers, a disturbance observer whose benefit and cost are
+both measured, and a dispersion analysis that says where the design breaks.
+Disturbance observers are standard in motion control [9].
 
 ## Getting started
 
@@ -460,7 +587,7 @@ From the repository root in MATLAB:
 
 ```matlab
 run_all              % regenerate every study and figure (about 10 minutes)
-runtests('tests')    % the 26 tests
+runtests('tests')    % the 28 tests
 ```
 
 | Script | What it does |
@@ -470,7 +597,7 @@ runtests('tests')    % the 26 tests
 | `studies/study_openloop.m` | descents with no burn and with full thrust |
 | `studies/study_attitude.m` | margins and time responses of the pitch loop |
 | `studies/study_landing.m` | guided landings, nominal and with single errors |
-| `studies/study_lateral.m` | cascaded PD against LQR |
+| `studies/study_lateral.m` | cascaded PD against LQR; the LQR in a wind with and without the observer |
 | `studies/study_montecarlo.m` | 1000 dispersed landings, convergence |
 | `studies/study_stress.m` | dispersions scaled 1 to 4 times |
 
@@ -498,7 +625,7 @@ Booster_Landing/
 │   ├── plant_3dof.slx          # planar 3-DOF plant, inputs T and delta
 │   ├── attitude_ctrl.slx       # PD, dynamic inversion, gimbal servo (Subsystem Reference)
 │   ├── attitude_loop.slx       # plant + attitude controller (step 2)
-│   └── landing.slx             # plant + attitude + guidance + lateral control
+│   └── landing.slx             # plant + attitude + guidance + lateral control + observer
 ├── utils/
 │   ├── simulate_plant.m        # one open-loop run of the plant
 │   ├── hoverslam_ignition.m    # closed-form full-thrust ignition altitude
@@ -521,7 +648,7 @@ once.
 runtests('tests')
 ```
 
-26 tests pin the invariants that would catch a silent error:
+28 tests pin the invariants that would catch a silent error:
 
 - **TestPlantVertical** (2): free fall and constant thrust against the rocket
   equation; a wrong gravity sign fails both.
@@ -536,9 +663,12 @@ runtests('tests')
   requirement, thrust limits and a single ignition, nominally and under six
   unknown errors; a nominal burn under 27 s with over 1500 kg left, which fails
   without the drag feedforward.
-- **TestLateral** (5): from 30 m and 2 m/s off the pad, the uncontrolled stage
+- **TestLateral** (7): from 30 m and 2 m/s off the pad, the uncontrolled stage
   misses by more than 50 m and both gain sets meet every requirement, nominally
   and with combined errors; a flipped sign or a missing $`1/a`$ fails all four.
+  With a 15 m/s wind, a thrust 5 % low and $`C_D = 1.2`$, the stage lands
+  drifting faster than 1 m/s with the observer off and meets every
+  requirement with it on; a flipped sign of $`\hat d`$ fails the second.
 
 ## Roadmap
 
@@ -562,6 +692,9 @@ in **[ROADMAP.md](ROADMAP.md)**.
 8. D. Enns, D. Bugajski, R. Hendrick & G. Stein, *Dynamic Inversion: an
    Evolving Methodology for Flight Control Design*, Int. J. Control **59**, 71
    (1994)
+9. W.-H. Chen, J. Yang, L. Guo & S. Li, *Disturbance-Observer-Based Control
+   and Related Methods — An Overview*, IEEE Trans. Ind. Electron. **63**, 1083
+   (2016)
 
 ## License
 
