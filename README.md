@@ -595,7 +595,7 @@ From the repository root in MATLAB:
 
 ```matlab
 run_all              % regenerate every study and figure (about 11 minutes)
-runtests('tests')    % the 28 tests
+runtests('tests')    % the 30 tests
 ```
 
 | Script | What it does |
@@ -640,7 +640,7 @@ Booster_Landing/
 │   ├── hoverslam_ignition.m    # closed-form full-thrust ignition altitude
 │   └── dispersed_landings.m    # draws dispersions and flies landings
 ├── studies/                    # one script per study, each writes its figures
-├── tests/                      # MATLAB unit tests, one class per model
+├── tests/                      # MATLAB unit tests, one class per model or feature
 ├── figures/                    # the figures and the animation of this README
 └── results/                    # raw Monte Carlo draws, git-ignored
 ```
@@ -657,7 +657,7 @@ once.
 runtests('tests')
 ```
 
-28 tests pin the invariants that would catch a silent error:
+30 tests pin the invariants that would catch a silent error:
 
 - **TestPlantVertical** (2): free fall and constant thrust against the rocket
   equation; a wrong gravity sign fails both.
@@ -678,6 +678,10 @@ runtests('tests')
   With a 15 m/s wind, a thrust 5 % low and $`C_D = 1.2`$, the stage lands
   drifting faster than 1 m/s with the observer off and meets every
   requirement with it on; a flipped sign of $`\hat d`$ fails the second.
+- **TestFailures** (2): 10 s into the burn, a 15 % thrust loss still meets
+  every requirement and a 30 % loss crashes, with the applied thrust never
+  above the remaining fraction of $`T_{max}`$; a missing or inverted loss
+  fails the second.
 
 ## Roadmap
 

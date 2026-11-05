@@ -1,0 +1,85 @@
+classdef TestFailures < matlab.unittest.TestCase
+%TESTFAILURES Checks the failures injected into models/landing.slx (extension 4).
+%
+%   thrustLossWithinMargin  15 % of the thrust lost 10 s into the burn:
+%                           the guidance, which is not told, still meets
+%                           every touchdown requirement.
+%   thrustLossBeyondMargin  30 % lost at the same time: more than the
+%                           throttle margin, so the stage crashes; the
+%                           thrust after the failure never exceeds
+%                           70 % of Tmax, which pins the injection itself.
+%
+%   Model interface expected by the tests: as in TestLanding, with the
+%   thrust applied to the plant (root Outport 9) multiplied by
+%   1 - p.fail.dT from time p.fail.tT on.
+%
+%   Run from the repository root:  runtests('tests')
+
+    properties (Constant)
+        Model = 'landing'
+        % 10 s after the nominal ignition at 4.9 s
+        tFail = 15
+    end
+
+    methods (TestClassSetup)
+        function addPaths(tc)
+            root = fileparts(fileparts(mfilename('fullpath')));
+            tc.applyFixture(matlab.unittest.fixtures.PathFixture(root));
+            tc.applyFixture(matlab.unittest.fixtures.PathFixture(fullfile(root, 'models')));
+        end
+    end
+
+    methods (Test)
+        function thrustLossWithinMargin(tc)
+            % Reference model: touchdown at 1.2 m/s.
+            p = params();
+            p.fail.dT = 0.15;  p.fail.tT = tc.tFail;
+            s = tc.simulate(p);
+
+            tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
+            tc.verifyLessThan(abs(s.vz(end)),    p.req.vz);
+            tc.verifyLessThan(abs(s.vx(end)),    p.req.vx);
+            tc.verifyLessThan(abs(s.theta(end)), p.req.theta);
+            tc.verifyLessThan(abs(s.x(end)),     p.req.x);
+            tc.verifyGreaterThan(s.m(end), p.mdry, 'Out of propellant.');
+            tc.verifyEqual(sum(diff(s.T > 0) > 0), 1, 'The engine must light exactly once.');
+            tc.verifyThrustCapped(p, s);
+        end
+
+        function thrustLossBeyondMargin(tc)
+            % Reference model: impact at 53 m/s.
+            p = params();
+            p.fail.dT = 0.30;  p.fail.tT = tc.tFail;
+            s = tc.simulate(p);
+
+            tc.verifyGreaterThan(abs(s.vz(end)), 5*p.req.vz);
+            tc.verifyThrustCapped(p, s);
+        end
+    end
+
+    methods (Access = private)
+        function verifyThrustCapped(tc, p, s)
+            % After the failure the applied thrust cannot exceed the
+            % remaining fraction of Tmax; before it, Tmax itself.
+            after = s.t > p.fail.tT + 1e-6;
+            tc.verifyLessThanOrEqual(max(s.T(after)), (1 - p.fail.dT)*p.kT*p.Tmax*(1 + 1e-9));
+            tc.verifyLessThanOrEqual(max(s.T(~after)), p.kT*p.Tmax*(1 + 1e-9));
+        end
+
+        function s = simulate(tc, p)
+            in = Simulink.SimulationInput(tc.Model);
+            in = in.setVariable('p', p);
+            in = in.setModelParameter('Solver', 'ode45', ...
+                'RelTol', '1e-8', 'AbsTol', '1e-8', 'StopTime', '120', ...
+                'SaveOutput', 'on', 'OutputSaveName', 'yout', 'SaveFormat', 'Dataset');
+            out = sim(in);
+            tc.assertEmpty(out.ErrorMessage);
+
+            names = {'x', 'z', 'vx', 'vz', 'theta', 'q', 'm', 'delta', 'T'};
+            for i = 1:numel(names)
+                s.(names{i}) = out.yout{i}.Values.Data;
+            end
+            s.t = out.yout{1}.Values.Time;
+        end
+    end
+end

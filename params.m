@@ -137,6 +137,14 @@ p.mc.vx0     = 2;                   % lateral velocity [m/s]
 p.mc.vz0     = 10;                  % vertical velocity [m/s]
 p.mc.theta0  = deg2rad(1);          % tilt [rad]
 
+% Failure injection (extension 4), off by default. A sudden thrust loss:
+% from time tT on, the engine delivers a fraction 1 - dT of what it
+% delivered before, on top of the constant error kT. The guidance is
+% not told. With eta = 0.7 the margin at ignition is about
+% 1 - (aStar + g)*m0/Tmax = 19 %.
+p.fail.dT = 0;      % fraction of thrust lost (0 = no failure) [-]
+p.fail.tT = 0;      % time of the thrust loss, from the start of the run [s]
+
 % Touchdown requirements
 p.req.vz    = 2;            % |vertical speed| [m/s]
 p.req.vx    = 1;            % |horizontal speed| [m/s]
