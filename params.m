@@ -107,6 +107,22 @@ p.KlatLQR   = [Kn(1), Kn(2), p.KpAtt - Kn(3), p.KdAtt - Kn(4)]/p.KpAtt;
 p.Klat      = p.KlatLQR;                             % gains flown by landing.slx [-]
 p.thetaRefMax = deg2rad(10);                         % limit on the commanded tilt [rad]
 
+% Lateral disturbance observer (extension 2). The lateral loop is
+% proportional only, so a lateral force it does not model (wind drag,
+% which scales with the airspeed squared) leaves the stage off the pad
+% and still moving at touchdown. The observer estimates that force per
+% unit mass from the measured motion,
+%   dHat = 1/(tauDob*s + 1) * (d(vx)/dt - (Tcmd/m)*sin(theta)),
+% and the lateral law cancels a fraction kDob of it:
+%   thetaRef = -(K(1)*x + K(2)*vx + kDob*dHat)/a + K(3)*theta + K(4)*q.
+% kDob = 1: the touchdown speed fails first, and a smaller kDob leaves a
+% part of the wind that depends on the (unknown) wind itself.
+% tauDob = 0.5 s: shorter lags the decaying wind less (3.9 m overshoot
+% at 0.05 s, 4.6 m at 0.5 s) but would pass the sensor noise amplified by
+% the derivative, which this model does not include.
+p.kDob   = 1;       % fraction of the estimated disturbance cancelled (0 = observer off) [-]
+p.tauDob = 0.5;     % time constant of the estimate's low-pass filter [s]
+
 % Monte Carlo dispersions (step 5): Gaussian, 1-sigma values. The
 % guidance and the controllers keep using the nominal values above.
 p.mc.n       = 1000;                % number of landings
