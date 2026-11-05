@@ -134,6 +134,7 @@ kept the engine lit in the touchdown frame.
 - [x] Tests: 15 % loss survived and 30 % crashing with the thrust capped; altimeter high against the closed form, altimeter low relighting, velocity drift missing the pad
 - [x] Study: thrust loss on a grid of time and size, altimeter bias from −20 to +20 m, velocity drift from −0.2 to 0.2 m/s²
 - [x] Results: 15 % thrust loss survived at any time against a static margin of 30 %; altimeter bias tolerated below 0.13 m; velocity drift below 0.054 m/s²
+- [x] `landing.slx` laid out again by script, one area per group, with every connection kept and the tests passing
 
 *Lesson.* The hand estimates were right for the altimeter (15.3 m/s for a
 10 m bias, within 1 %) and wrong in their reasoning for the thrust loss: the

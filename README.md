@@ -245,7 +245,7 @@ contain no numbers.
 | `plant_3dof.slx` | the seven-state plant; inputs $`T`$ and $`\delta`$, seven outputs |
 | `attitude_ctrl.slx` | Subsystem Reference: PD on $`\ddot\theta_{cmd}`$, the inversion, the gimbal servo |
 | `attitude_loop.slx` | the plant (Model block) closed by `attitude_ctrl`, for step 2 |
-| `landing.slx` | the plant, `attitude_ctrl`, the vertical guidance and the lateral control |
+| `landing.slx` | the plant, `attitude_ctrl`, the vertical guidance, the lateral control with the disturbance observer, the injected failures and the sensors, laid out in one area per group |
 
 The plant is referenced, not copied, so one correction reaches every model.
 
@@ -709,7 +709,7 @@ Booster_Landing/
 │   ├── plant_3dof.slx          # planar 3-DOF plant, inputs T and delta
 │   ├── attitude_ctrl.slx       # PD, dynamic inversion, gimbal servo (Subsystem Reference)
 │   ├── attitude_loop.slx       # plant + attitude controller (step 2)
-│   └── landing.slx             # plant + attitude + guidance + lateral control + observer
+│   └── landing.slx             # plant + attitude + guidance + lateral control + observer + failures
 ├── utils/
 │   ├── simulate_plant.m        # one open-loop run of the plant
 │   ├── hoverslam_ignition.m    # closed-form full-thrust ignition altitude
