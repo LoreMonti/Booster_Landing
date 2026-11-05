@@ -8,10 +8,21 @@ classdef TestFailures < matlab.unittest.TestCase
 %                           throttle margin, so the stage crashes; the
 %                           thrust after the failure never exceeds
 %                           70 % of Tmax, which pins the injection itself.
+%   altimeterReadsHigh      +10 m bias: the guidance plans to stop 10 m
+%                           below the ground and hits it at about 15 m/s.
+%   altimeterReadsLow       -10 m bias: the stage stops above the ground
+%                           and the engine has to relight.
+%   velocityDrift           0.1 m/s^2 drift of the measured vx: the
+%                           lateral law steers the stage off the pad, and
+%                           the observer, which differentiates the same
+%                           measurement, adds to the miss.
 %
-%   Model interface expected by the tests: as in TestLanding, with the
-%   thrust applied to the plant (root Outport 9) multiplied by
-%   1 - p.fail.dT from time p.fail.tT on.
+%   Model interface expected by the tests: as in TestLanding, with
+%     - the thrust applied to the plant (root Outport 9) multiplied by
+%       1 - p.fail.dT from time p.fail.tT on;
+%     - the guidance reading z + p.fail.zBias instead of z;
+%     - lateral_ctrl and the observer reading vx + p.fail.vxDrift*t
+%       instead of vx.
 %
 %   Run from the repository root:  runtests('tests')
 
@@ -54,6 +65,38 @@ classdef TestFailures < matlab.unittest.TestCase
 
             tc.verifyGreaterThan(abs(s.vz(end)), 5*p.req.vz);
             tc.verifyThrustCapped(p, s);
+        end
+
+        function altimeterReadsHigh(tc)
+            % Reference model: impact at 15.3 m/s, the estimate
+            % sqrt(vTouch^2 + 2*aStar*10) gives 15.3 m/s.
+            p = params();
+            p.fail.zBias = 10;
+            s = tc.simulate(p);
+            tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
+            tc.verifyEqual(abs(s.vz(end)), sqrt(p.vTouch^2 + 2*p.aStar*10), 'RelTol', 0.05);
+        end
+
+        function altimeterReadsLow(tc)
+            % Reference model: 44 ignitions, touchdown at 1.2 m/s.
+            p = params();
+            p.fail.zBias = -10;
+            s = tc.simulate(p);
+            tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
+            tc.verifyGreaterThan(sum(diff(s.T > 0) > 0), 1, 'The engine should have relit.');
+        end
+
+        function velocityDrift(tc)
+            % Reference model: miss 18.6 m with the observer, 16.0 m without.
+            p = params();
+            p.fail.vxDrift = 0.1;
+            on = tc.simulate(p);
+            p.kDob = 0;
+            off = tc.simulate(p);
+            tc.verifyGreaterThan(abs(on.x(end)), p.req.x);
+            tc.verifyGreaterThan(abs(off.x(end)), p.req.x);
+            % the observer differentiates the drifting measurement too
+            tc.verifyGreaterThan(abs(on.x(end)), abs(off.x(end)) + 1);
         end
     end
 

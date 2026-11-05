@@ -144,6 +144,15 @@ p.mc.theta0  = deg2rad(1);          % tilt [rad]
 % 1 - (aStar + g)*m0/Tmax = 19 %.
 p.fail.dT = 0;      % fraction of thrust lost (0 = no failure) [-]
 p.fail.tT = 0;      % time of the thrust loss, from the start of the run [s]
+% Sensor faults: the guidance and the lateral control (observer included)
+% read measured signals instead of the true state,
+%   z_m = z + zBias,   vx_m = vx + vxDrift*t,
+% a constant altimeter bias and the velocity drift of an integrated
+% accelerometer bias. Estimates: a stage that reads zBias too high meets
+% the ground still at sqrt(vTouch^2 + 2*aStar*zBias), 15 m/s for 10 m;
+% one that reads too low stops in mid-air and the engine relights.
+p.fail.zBias   = 0;     % altimeter bias, measured minus true [m]
+p.fail.vxDrift = 0;     % drift rate of the measured lateral velocity [m/s^2]
 
 % Touchdown requirements
 p.req.vz    = 2;            % |vertical speed| [m/s]
