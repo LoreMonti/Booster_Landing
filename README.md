@@ -9,11 +9,13 @@ Every model is checked against closed-form solutions before it is used, and
 the full landing is evaluated on 1000 Monte Carlo runs with thrust, drag,
 mass, wind and initial-state errors the guidance does not know about.
 
-![Monte Carlo touchdown dispersion](figures/montecarlo_touchdown.png)
+![Animation of one guided landing](figures/landing.gif)
 
-*1000 guided landings with dispersed thrust, Isp, mass, drag, wind and initial
-state: touchdown state with its 99 % covariance ellipse (top left), lateral
-miss, lateral speed and propellant left.*
+*One guided landing from 5 km, starting 30 m off the pad and drifting away at
+2 m/s in a 10 m/s wind, at twice real time. Left: the whole descent, with the
+horizontal scale stretched. Right: a window that follows the stage at true
+scale, with the plume along the gimbal direction and proportional to the
+thrust. It touches down 1.7 m from the centre at 1.2 m/s.*
 
 **Key results**
 
@@ -482,7 +484,13 @@ the full cancellation was kept.
 
 ### Monte Carlo and stress test
 
-On 1000 dispersed landings (figure at the top) all succeed: 95 % interval
+![Monte Carlo touchdown dispersion](figures/montecarlo_touchdown.png)
+
+*1000 guided landings with dispersed thrust, Isp, mass, drag, wind and initial
+state: touchdown state with its 99 % covariance ellipse (top left), lateral
+miss, lateral speed and propellant left.*
+
+On 1000 dispersed landings all succeed: 95 % interval
 99.6–100 %. At the 99th percentile the stage lands 1.88 m from the pad at
 1.28 m/s vertical and 0.21 m/s lateral speed, tilted 0.09 deg; the least
 propellant left is 583 kg. Without the observer the same draws give 3.84 m and
@@ -586,7 +594,7 @@ Machine Learning Toolbox. The results were produced with MATLAB R2026b
 From the repository root in MATLAB:
 
 ```matlab
-run_all              % regenerate every study and figure (about 10 minutes)
+run_all              % regenerate every study and figure (about 11 minutes)
 runtests('tests')    % the 28 tests
 ```
 
@@ -600,6 +608,7 @@ runtests('tests')    % the 28 tests
 | `studies/study_lateral.m` | cascaded PD against LQR; the LQR in a wind with and without the observer |
 | `studies/study_montecarlo.m` | 1000 dispersed landings, convergence |
 | `studies/study_stress.m` | dispersions scaled 1 to 4 times |
+| `studies/study_animation.m` | the animated landing at the top of this README |
 
 As a library:
 
@@ -632,7 +641,7 @@ Booster_Landing/
 │   └── dispersed_landings.m    # draws dispersions and flies landings
 ├── studies/                    # one script per study, each writes its figures
 ├── tests/                      # MATLAB unit tests, one class per model
-├── figures/                    # the figures of this README
+├── figures/                    # the figures and the animation of this README
 └── results/                    # raw Monte Carlo draws, git-ignored
 ```
 

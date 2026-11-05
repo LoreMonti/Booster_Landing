@@ -115,12 +115,23 @@ decaying; a fraction $`k_d = 0.75`$ maximised the worst margin on that one case,
 but on the dispersed landings it was no better than 1, and a gain tuned on one
 case is tuned to that case's wind.
 
+## Extension 3 — Trajectory animation
+
+- [x] `study_animation.m`: one landing (30 m, 2 m/s, 10 m/s wind) flown in `landing.slx` and drawn frame by frame
+- [x] Two views: the whole descent with the horizontal scale stretched, and a 90 m window that follows the stage at true scale with tilt, gimbal-directed plume, legs and telemetry
+- [x] GIF at twice real time, one shared colour map, at the top of the README
+
+*Lesson.* The descent is 5 km tall and under 100 m wide while the stage is
+42 m long, so no single view at true scale shows both the path and the
+attitude; splitting the picture into a stretched overview and a true-scale
+close-up solved it. The first version drew the plume through the ground and
+kept the engine lit in the touchdown frame.
+
 ## Possible extensions
 
 - [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would set the filter of the disturbance observer, which differentiates a velocity, and show whether it and the guidance integral tolerate biased measurements.
 - [ ] **Failure injection and divert** (the optional step 6 of the plan): a sudden thrust loss or a sensor bias, and a retarget to a safe point.
 - [ ] **Throttle dynamics.** A first-order engine response would show how much of the 20 % throttle margin the guidance really has.
-- [ ] **Trajectory animation.** The second key figure of the plan, one landing drawn in the plane.
 - [ ] **Convex-optimisation guidance** (README reference 5): the fuel-optimal landing as a benchmark for the feedback law, to measure what $`\eta = 0.7`$ costs.
 - [ ] **Out-of-plane motion.** A second lateral axis would give a true landing ellipse on the ground.
 - [ ] **Aerodynamics with angle of attack.** A pitching moment and a drag growing with the tilt, the largest simplification in the model.
