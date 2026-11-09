@@ -77,15 +77,18 @@ p.zMin   = 0.05;                            % altitude floor in aReq, avoids 0/0
 % it under 2 m/s. The guidance therefore aims first at vGate at the gate
 % altitude zGate, aReq = (vz^2 - vGate^2)/(2*(z - zGate)), and below the
 % gate at vTouch at z = 0, which it reaches decelerating at only aGate:
-% the tolerated bias becomes (2^2 - vTouch^2)/(2*aGate) = 0.30 m. A
+% the tolerated bias becomes (2^2 - vTouch^2)/(2*aGate) = 0.21 m. A
 % constant-speed final descent is impossible, because even at Tmin the
 % stage decelerates by at least kT*Tmin/m - g (2.6 m/s^2 nominal, 3.8
 % with a thrust 10 % high): aGate must stay above that, or the stage
-% stops in mid-air and the engine relights. The guidance integral is
-% frozen below the gate, where aReq < aStar on purpose.
+% stops in mid-air and the engine relights. aGate = 5 (0.30 m) still
+% relit the engine in 1 of 1000 dispersed landings and 12 of 300 with
+% doubled dispersions, when the stage reached the gate slower than
+% vGate; aGate = 7 relit none. The guidance integral is frozen below
+% the gate, where aReq < aStar on purpose.
 p.vGate  = 5;                               % speed at the gate [m/s]
-p.aGate  = 5;                               % deceleration below the gate [m/s^2]
-p.zGate  = (p.vGate^2 - p.vTouch^2)/(2*p.aGate);   % gate altitude, 2.4 m [m]
+p.aGate  = 7;                               % deceleration below the gate [m/s^2]
+p.zGate  = (p.vGate^2 - p.vTouch^2)/(2*p.aGate);   % gate altitude, 1.7 m [m]
 p.aOff   = 0.1*p.aGate;                     % engine-off threshold of the relay [m/s^2]
                                             % (0.1*aStar cut the engine 0.35 m up below the gate)
 p.kT     = 1;                               % actual/commanded thrust (1 = no thrust error) [-]

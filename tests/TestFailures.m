@@ -10,10 +10,10 @@ classdef TestFailures < matlab.unittest.TestCase
 %                           70 % of Tmax, which pins the injection itself.
 %   altimeterReadsHigh      +1 m bias, inside the terminal gate: the stage
 %                           meets the ground still at
-%                           sqrt(vTouch^2 + 2*aGate*1), 3.3 m/s.
-%   gateToleratesBias       +0.25 m bias: within the 0.30 m the gate
+%                           sqrt(vTouch^2 + 2*aGate*1), 3.9 m/s.
+%   gateToleratesBias       +0.15 m bias: within the 0.21 m the gate
 %                           tolerates, the touchdown meets the requirement
-%                           (2.6 m/s without the gate).
+%                           (2.1 m/s without the gate).
 %   altimeterReadsLow       -10 m bias: the stage stops above the ground
 %                           and the engine has to relight.
 %   velocityDrift           0.1 m/s^2 drift of the measured vx: the
@@ -72,8 +72,7 @@ classdef TestFailures < matlab.unittest.TestCase
         end
 
         function altimeterReadsHigh(tc)
-            % Reference model: impact at 3.34 m/s against 3.32 m/s from
-            % the closed form (4.92 m/s without the gate).
+            % Closed form 3.87 m/s (4.92 m/s without the gate).
             p = params();
             p.fail.zBias = 1;
             s = tc.simulate(p);
@@ -82,9 +81,9 @@ classdef TestFailures < matlab.unittest.TestCase
         end
 
         function gateToleratesBias(tc)
-            % Reference model: 1.74 m/s with a 0.2 m bias, 2.01 at 0.3 m.
+            % Closed form 1.76 m/s.
             p = params();
-            p.fail.zBias = 0.25;
+            p.fail.zBias = 0.15;
             s = tc.simulate(p);
             tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
             tc.verifyLessThan(abs(s.vz(end)), p.req.vz);

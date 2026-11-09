@@ -12,7 +12,9 @@ function f = study_failures(figDir)
 %                fall behind its plan.
 %   Altimeter    a constant bias zBias on the altitude read by the
 %                guidance, against the closed form of the impact speed
-%                sqrt(vTouch^2 + 2*aStar*zBias) for a positive bias.
+%                for a positive bias h: sqrt(vTouch^2 + 2*aGate*h) inside
+%                the terminal gate, sqrt(vGate^2 + 2*aStar*(h - zGate))
+%                above it.
 %   Velocity     a drift vxDrift*t on the lateral velocity read by the
 %                lateral law and the observer, with the observer on and off.
 %
@@ -75,7 +77,10 @@ tl = tiledlayout(fig, 1, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 title(tl, 'Sensor faults: the guidance and the lateral law fly on measured signals');
 ax = nexttile(tl);  hold(ax, 'on');  grid(ax, 'on');
 hb = linspace(0, max(zb), 200);
-plot(ax, hb, sqrt(p0.vTouch^2 + 2*p0.aStar*hb), 'k--', 'DisplayName', '(u_t^2 + 2a^*h_b)^{1/2}');
+vImp = sqrt(p0.vTouch^2 + 2*p0.aGate*hb);
+above = hb > p0.zGate;
+vImp(above) = sqrt(p0.vGate^2 + 2*p0.aStar*(hb(above) - p0.zGate));
+plot(ax, hb, vImp, 'k--', 'DisplayName', 'closed form');
 plot(ax, zb, abs(f.altimeter.vz_mps), 'o-', 'LineWidth', 1.4, 'DisplayName', 'simulated');
 yline(ax, p0.req.vz, ':', 'requirement', 'HandleVisibility', 'off');
 yyaxis(ax, 'right');  bar(ax, zb(zb < 0), f.altimeter.Ignitions(zb < 0), 0.4, 'FaceAlpha', 0.4, 'DisplayName', 'ignitions');

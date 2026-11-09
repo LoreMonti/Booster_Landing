@@ -146,10 +146,27 @@ lateral law as well showed that the law itself makes most of the miss. The
 first private reference forgot that wire, and only the test that compares the
 observer on and off would have caught it.
 
+## Extension 5 — Terminal gate
+
+- [x] Diagnosis from the failure study: aiming at 1 m/s exactly at $`z = 0`$ with $`a^* = 11.6`$ m/s² tolerates only 0.13 m of altimeter bias
+- [x] Two-phase guidance in `landing.slx`: aim at $`v_g`$ at $`z_g`$, then at $`u_t`$ at the ground, decelerating at $`a_g`$; integral frozen below the gate; relay off threshold $`0.1\,a_g`$
+- [x] Trade-off measured for $`a_g`$ = 5, 7, 9 m/s² on the Monte Carlo, doubled dispersions and the thrust-loss grid; $`a_g = 7`$ m/s² kept
+- [x] Tests: the impact speed at a 1 m bias against the closed form with $`a_g`$, and a 0.15 m bias landing under 2 m/s with one ignition
+- [x] Every study rerun: nominal touchdown 1.12 m/s with 1663 kg left, 1000 of 1000 dispersed landings, altimeter bias tolerated up to 0.21 m, worst-case thrust loss 10 %
+
+*Lesson.* The fix proposed in the README after the failure study, a final
+descent at constant speed, was impossible for this vehicle: the whole project
+starts from the fact that the engine cannot hover, and the proposal had
+forgotten it. The gate that does work trades altimeter tolerance against
+margin above the minimum throttle, and the first value tried, 5 m/s², looked
+right on the tests and only showed its cost when `run_all` reported a relight
+in the Monte Carlo; a parameter sweep on the full set of studies, not the
+tests alone, chose the final value. The gain is modest, 0.13 to 0.21 m, and the
+README says so.
+
 ## Possible extensions
 
 - [ ] **Navigation errors.** The controllers see the true state; sensor noise and a Kalman filter would set the filter of the disturbance observer, which differentiates a velocity, and show whether it and the guidance integral tolerate biased measurements.
-- [ ] **Terminal gate for the altimeter.** Aim at a few metres above the ground and descend the rest at constant speed: the failure study shows that the guidance tolerates only 0.13 m of altimeter bias.
 - [ ] **Monte Carlo with random failures.** Draw the type, time and size of a failure in every run, to give a success rate with failures instead of one failure at a time.
 - [ ] **Divert.** Retarget to a safe point when a failure makes the pad unreachable.
 - [ ] **Throttle dynamics.** A first-order engine response would show how much of the 20 % throttle margin the guidance really has.

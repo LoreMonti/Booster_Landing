@@ -15,25 +15,26 @@ mass, wind and initial-state errors the guidance does not know about.
 2 m/s in a 10 m/s wind, at twice real time. Left: the whole descent, with the
 horizontal scale stretched. Right: a window that follows the stage at true
 scale, with the plume along the gimbal direction and proportional to the
-thrust. It touches down 1.7 m from the centre at 1.2 m/s.*
+thrust. It touches down 1.6 m from the centre at 1.1 m/s.*
 
 **Key results**
 
 - **1000 of 1000** dispersed landings meet every touchdown requirement (95 %
   interval 99.6–100 %), with 99th percentiles of **1.9 m** from the pad,
-  **1.3 m/s** vertical and 0.2 m/s lateral speed; with every dispersion
-  doubled, 98 % still land. A sudden thrust loss of **15 %** is survived at
-  any time in the burn; an altimeter that reads more than **0.13 m** high is
-  not.
-- A constant-deceleration guidance law in feedback lands at **1.2 m/s**; adding
-  a drag feedforward cuts the burn from 34 s to **25 s** and leaves **1686 kg**
+  **1.2 m/s** vertical and 0.2 m/s lateral speed; with every dispersion
+  doubled, 98 % still land. A sudden thrust loss of **10 %** is survived at
+  any time in the burn, with a single ignition; a terminal gate raises the
+  altimeter bias the guidance tolerates from 0.13 to **0.21 m**, the most the
+  engine's minimum throttle allows without relights.
+- A constant-deceleration guidance law in feedback lands at **1.1 m/s**; adding
+  a drag feedforward cuts the burn from 34 s to **25 s** and leaves **1663 kg**
   of propellant instead of 635, and an integral term keeps it landing with a
   thrust 10 % weaker than commanded.
 - With the same gimbal and the same peak effort, an **LQR** on the coupled
-  lateral and pitch states lands **0.004–0.19 m** from the pad against
+  lateral and pitch states lands **0.008–0.18 m** from the pad against
   0.4–1.6 m for a cascaded PD; a **disturbance observer** that measures the
-  wind force and cancels it halves the 99th-percentile miss (3.8 to 1.9 m) and
-  cuts the lateral-speed failures under 2.5× dispersions from 41 to 7 of 300,
+  wind force and cancels it halves the 99th-percentile miss (3.7 to 1.9 m) and
+  cuts the lateral-speed failures under 2.5× dispersions from 38 to 7 of 300,
   where a lateral integral wound up.
 
 ## Contents
@@ -277,13 +278,34 @@ T = \mathrm{sat}_{[T_{min},\,T_{max}]}\Big(m\,(g + a_{req} + a_I) - \hat D\Big),
 |---|---|---|
 | $`\eta`$ | 0.7 | about 20 % of throttle left for errors at ignition; with $`\eta = 1`$ a 3 % thrust or mass error crashes at 75 m/s |
 | target touchdown speed $`u_t`$ | 1 m/s | keeps $`a_{req}`$ finite at the end; the requirement is 2 m/s |
-| drag feedforward $`\hat D`$ | nominal $`\hat C_D = 0.8`$ | without it drag over-brakes the stage and $`a_{req}`$ keeps shrinking: a 34 s burn and 635 kg left instead of 25 s and 1686 kg |
+| terminal gate $`v_g`$, $`a_g`$ | 5 m/s at $`z_g = 1.7`$ m, then 7 m/s² | see below: it raises the altimeter bias tolerated from 0.13 to 0.21 m |
+| drag feedforward $`\hat D`$ | nominal $`\hat C_D = 0.8`$ | without it drag over-brakes the stage and $`a_{req}`$ keeps shrinking: a 34 s burn and 635 kg left instead of 25 s and 1663 kg |
 | integral term $`K_i`$ | 1 s⁻¹ | with the feedforward alone a thrust 5 % low lands at 2.4 m/s, because $`a_{req}`$ grows like $`u/z`$; 0.3 s⁻¹ relights the engine with $`C_D = 1.2`$ |
-| ignition logic | relay, on at $`a^*`$, off at $`0.1\,a^*`$ | the hysteresis prevents the engine from switching on and off around $`a^*`$ |
+| ignition logic | relay, on at $`a^*`$, off at $`0.1\,a_g`$ | the hysteresis prevents the engine from switching on and off around $`a^*`$; an off threshold of $`0.1\,a^*`$ cut the engine 0.35 m above the ground once the gate was added |
 
-The integral only runs while the engine is lit. In the nominal case
-$`a_{req}`$ then stays at $`a^* = 11.6`$ m/s² for the whole burn, which is the
-planned constant deceleration.
+The integral only runs while the engine is lit and the stage is above the
+gate. In the nominal case $`a_{req}`$ then stays at $`a^* = 11.6`$ m/s² down to
+the gate, which is the planned constant deceleration.
+
+**Terminal gate.** Aiming at $`u_t`$ exactly at $`z = 0`$ makes the touchdown as
+sensitive to the altimeter as possible (see the failure study below). The
+guidance therefore aims first at a gate speed $`v_g`$ at a gate altitude $`z_g`$,
+and below it at $`u_t`$ at the ground:
+
+```math
+a_{req} = \frac{\dot z^2 - v_g^2}{2\,(z - z_g)} \quad (z \gt z_g), \qquad a_{req} = \frac{\dot z^2 - u_t^2}{2z} \quad (z \le z_g), \qquad a_g = \frac{v_g^2 - u_t^2}{2 z_g}
+```
+
+so the last metres are flown at the lower deceleration $`a_g`$. A
+constant-speed final descent, the usual way to make a landing insensitive to
+the altimeter, is impossible here: even at minimum throttle the stage
+decelerates by $`k_T T_{min}/m - g`$, 2.6 m/s² nominally and 3.8 m/s² with a
+thrust 10 % high. $`a_g`$ has to stay above that with some room, or a stage
+that reaches the gate slower than planned is told to brake less than the
+engine can, and the relay cuts and relights it: with $`a_g = 5`$ m/s² this
+happened in 1 of 1000 dispersed landings and 12 of 300 with doubled
+dispersions, with $`a_g = 7`$ m/s² in none. The integral is frozen below the
+gate, where $`a_{req} \lt a^*`$ on purpose.
 
 ### Lateral control
 
@@ -359,12 +381,15 @@ If the stage could follow its plan after a thrust loss, it would survive any
 loss that the nominal thrust of the rest of the burn leaves room for,
 $`f \lt 1 - \max_{t \ge t_f} T(t)/T_{max}`$. With an altimeter reading $`h_b`$
 too high, the guidance brings the stage to $`u_t`$ where it believes the ground
-is, and the real ground arrives $`h_b`$ earlier, still at the planned
-deceleration $`a^*`$:
+is, and the real ground arrives $`h_b`$ earlier, still at the deceleration of
+the last metres, $`a_g`$ with the gate and $`a^*`$ without:
 
 ```math
-v_{impact} = \sqrt{u_t^2 + 2a^*h_b} \lt v_{req} \quad\Longleftrightarrow\quad h_b \lt \frac{v_{req}^2 - u_t^2}{2a^*} = 0.13\ \mathrm{m}
+v_{impact} = \sqrt{u_t^2 + 2a_g h_b} \lt v_{req} \quad\Longleftrightarrow\quad h_b \lt \frac{v_{req}^2 - u_t^2}{2a_g} = 0.21\ \mathrm{m} \quad (0.13\ \mathrm{m\ with}\ a^*)
 ```
+
+valid while $`h_b \lt z_g`$; a larger bias hits the ground during the first
+phase, at $`\sqrt{v_g^2 + 2a^*(h_b - z_g)}`$.
 
 An altimeter that reads too low stops the stage above the ground, where an
 engine that cannot hover has to cut and relight.
@@ -427,19 +452,19 @@ margin is the meaningful number. The margins are in
 ![Nominal guided landing](figures/landing_nominal.png)
 
 The engine lights at 3600 m, the vertical speed falls linearly, which is the
-constant deceleration, and the stage touches down at **1.20 m/s** after a
-**25 s** burn with **1686 kg** of propellant left. The thrust rises during the
+constant deceleration, and the stage touches down at **1.12 m/s** after a
+**25 s** burn with **1663 kg** of propellant left. The thrust rises during the
 burn, from 400 to 590 kN: early on, at 290 m/s, drag does much of the braking.
 
 | Errors unknown to the guidance | Ignition | Touchdown | Propellant left |
 |---|---|---|---|
-| none | 3600 m | 1.20 m/s | 1686 kg |
-| thrust −5 % | 3600 m | 1.20 m/s | 1692 kg |
-| thrust −10 % | 3600 m | 1.20 m/s | 1699 kg |
-| $`C_D`$ = 0.4 | 3912 m | 1.33 m/s | 1071 kg |
-| $`C_D`$ = 1.2 | 3117 m | 1.15 m/s | 2263 kg |
-| $`I_{sp}`$ −5 % | 3600 m | 1.20 m/s | 1460 kg |
-| thrust −5 %, $`C_D`$ 0.4, $`I_{sp}`$ −5 % | 3912 m | 1.38 m/s | 818 kg |
+| none | 3601 m | 1.12 m/s | 1663 kg |
+| thrust −5 % | 3601 m | 1.20 m/s | 1674 kg |
+| thrust −10 % | 3601 m | 1.28 m/s | 1686 kg |
+| $`C_D`$ = 0.4 | 3913 m | 1.12 m/s | 1047 kg |
+| $`C_D`$ = 1.2 | 3118 m | 1.12 m/s | 2238 kg |
+| $`I_{sp}`$ −5 % | 3601 m | 1.12 m/s | 1436 kg |
+| thrust −5 %, $`C_D`$ 0.4, $`I_{sp}`$ −5 % | 3913 m | 1.20 m/s | 799 kg |
 
 The engine lights once in every case and the thrust stays within its limits
 ([`landing_dispersions.png`](figures/landing_dispersions.png)).
@@ -454,7 +479,7 @@ uncontrolled stage misses the pad by 50–79 m:
 
 | | Cascaded PD | LQR |
 |---|---|---|
-| miss at touchdown | 0.4–1.6 m | **0.004–0.19 m** |
+| miss at touchdown | 0.4–1.6 m | **0.008–0.18 m** |
 | time to $`\lvert x\rvert \lt 1`$ m after ignition | 21–26 s | **15–18 s** |
 | peak tilt | 6.5–8.8 deg | 6.2–9.2 deg |
 | peak gimbal, propellant | same | same |
@@ -471,15 +496,15 @@ loops that the cascade keeps apart by bandwidth.
 The case of the figure starts 30 m off the pad and drifting away at 2 m/s,
 with a 15 m/s wind, a thrust 5 % low and $`C_D = 1.2`$. Before ignition the
 wind has already pushed the stage to 55 m and 5.2 m/s. Without the observer it
-lands 7.6 m off still drifting at **1.46 m/s**, which fails the 1 m/s
-requirement; with it, it lands 4.6 m on the other side at **0.02 m/s**:
+lands 7.3 m off still drifting at **1.44 m/s**, which fails the 1 m/s
+requirement; with it, it lands 4.6 m on the other side at **0.01 m/s**:
 
 | Case (LQR) | observer off | observer on |
 |---|---|---|
-| 30 m, 2 m/s, wind 15 m/s, thrust −5 %, $`C_D`$ 1.2 | 7.60 m, −1.46 m/s (fails) | −4.64 m, −0.02 m/s |
-| 30 m, wind +25 m/s | 7.28 m, −0.91 m/s | −3.13 m, 0.24 m/s |
-| 30 m, wind −25 m/s | −7.26 m, 0.85 m/s | 2.27 m, −0.05 m/s |
-| 30 m, 2 m/s, no wind | −0.02 m, −0.03 m/s | −0.44 m, 0.13 m/s |
+| 30 m, 2 m/s, wind 15 m/s, thrust −5 %, $`C_D`$ 1.2 | 7.27 m, −1.44 m/s (fails) | −4.65 m, 0.01 m/s |
+| 30 m, wind +25 m/s | 7.08 m, −0.89 m/s | −3.08 m, 0.26 m/s |
+| 30 m, wind −25 m/s | −7.07 m, 0.82 m/s | 2.25 m, −0.08 m/s |
+| 30 m, 2 m/s, no wind | −0.03 m, −0.03 m/s | −0.41 m, 0.13 m/s |
 
 The estimate (bottom panel) follows the disturbance with the lag of its
 filter. The two trajectories coincide until 15 s because the commanded tilt
@@ -494,22 +519,23 @@ the smaller of $`1 - \lvert x\rvert/10\,\mathrm{m}`$ and $`1 - \lvert\dot x\rver
 
 | $`k_d`$ | 0 | 0.25 | 0.5 | 0.75 | 1 |
 |---|---|---|---|---|---|
-| miss | 7.60 m | 4.71 m | 1.70 m | −1.42 m | −4.64 m |
-| lateral speed | −1.46 m/s | −1.12 m/s | −0.76 m/s | −0.40 m/s | −0.02 m/s |
-| worst margin | −46 % | −12 % | 24 % | **60 %** | 54 % |
+| miss | 7.27 m | 4.45 m | 1.52 m | −1.51 m | −4.65 m |
+| lateral speed | −1.44 m/s | −1.10 m/s | −0.74 m/s | −0.37 m/s | 0.01 m/s |
+| worst margin | −44 % | −10 % | 26 % | **63 %** | 54 % |
 
 | $`\tau_d`$ | 0.05 s | 0.2 s | 0.5 s | 1 s | 2 s |
 |---|---|---|---|---|---|
-| miss | −3.88 m | −4.14 m | −4.64 m | −5.38 m | −6.43 m |
-| lateral speed | −0.01 m/s | −0.01 m/s | −0.02 m/s | −0.08 m/s | −0.27 m/s |
+| miss | −3.88 m | −4.14 m | −4.65 m | −5.40 m | −6.49 m |
+| lateral speed | 0.01 m/s | 0.01 m/s | 0.01 m/s | −0.05 m/s | −0.24 m/s |
 
 On this single case $`k_d = 0.75`$ has the larger worst margin, because it
 under-corrects just enough to cancel the overshoot. It was not kept: the
 amount it under-corrects is a fixed fraction of a wind the controller does not
 know, so the right value changes with the wind. Flown on the dispersed
-landings, $`k_d = 0.75`$ and $`k_d = 1`$ are within two runs of each other
-under 2× and 3× dispersions (291 against 293 and 254 against 256 of 300), so
-the full cancellation was kept.
+landings when the observer was tuned, before the terminal gate, $`k_d = 0.75`$
+and $`k_d = 1`$ were within two runs of each other under 2× and 3× dispersions
+(291 against 293 and 254 against 256 of 300), so the full cancellation was
+kept.
 
 ### Monte Carlo and stress test
 
@@ -520,25 +546,26 @@ state: touchdown state with its 99 % covariance ellipse (top left), lateral
 miss, lateral speed and propellant left.*
 
 On 1000 dispersed landings all succeed: 95 % interval
-99.6–100 %. At the 99th percentile the stage lands 1.88 m from the pad at
-1.28 m/s vertical and 0.21 m/s lateral speed, tilted 0.09 deg; the least
-propellant left is 583 kg. Without the observer the same draws give 3.84 m and
-0.59 m/s. The spread of the miss settles at 0.65 m after 300–500 runs
+99.6–100 %, every one with a single ignition. At the 99th percentile the
+stage lands 1.85 m from the pad at 1.19 m/s vertical and 0.21 m/s lateral
+speed, tilted 0.09 deg; the least propellant left is 563 kg. Without the
+observer the same draws give 3.71 m and 0.58 m/s. The spread of the miss
+settles at 0.64 m after 300–500 runs
 ([`montecarlo_convergence.png`](figures/montecarlo_convergence.png)), against
-1.35 m without the observer.
+1.29 m without the observer.
 
 ![Stress test](figures/stress_test.png)
 
 | Dispersions | ×1 | ×1.5 | ×2 | ×2.5 | ×3 | ×4 |
 |---|---|---|---|---|---|---|
-| success, observer on | 100 % | 99.7 % | 98 % | 94 % | 87 % | 71 % |
-| success, observer off | 100 % | 99 % | 95 % | 83 % | 80 % | 57 % |
-| lateral-speed failures, on / off | 0 / 0 | 1 / 3 | 4 / 12 | 7 / 41 | 24 / 46 | 56 / 96 |
+| success, observer on | 100 % | 99.7 % | 98 % | 95 % | 88 % | 71 % |
+| success, observer off | 100 % | 99 % | 95 % | 85 % | 81 % | 58 % |
+| lateral-speed failures, on / off | 0 / 0 | 1 / 3 | 4 / 11 | 7 / 38 | 24 / 46 | 56 / 93 |
 
 Without the observer the lateral speed at touchdown was the first requirement
 to fail at every level, and the most extreme draw among the early failures was
 most often the wind. With it, the lateral failures drop by a factor of 2 to 6;
-from 2.5× the vertical speed fails as often (10 runs at 2.5×, unchanged by the
+from 2.5× the vertical speed fails as often (9 runs at 2.5×, unchanged by the
 observer), so the vertical guidance becomes the limit, and no single
 dispersion dominates the failures any more. Running out of propellant appears
 only from twice the nominal dispersions.
@@ -547,30 +574,39 @@ only from twice the nominal dispersions.
 
 ![Thrust loss](figures/failures_thrust.png)
 
-A thrust loss of up to **15 %** is survived whenever it happens, and up to
-20 % in the first 4 s after ignition and around 14 s. The static margin, the
-loss that the thrust of the rest of the burn leaves room for, is 30 %: half
-of it is spent because after the loss the stage falls behind its plan, and the
-required deceleration grows like $`u/z`$ as it approaches the ground. The
-edge of success is ragged rather than a clean band, so a single number for
-the thrust margin would overstate what is known.
+A thrust loss of up to **10 %** is survived whenever it happens, counting a
+landing that relights the engine as a failure, and up to 20–22.5 % between 10
+and 14 s after ignition. Before the terminal gate the worst case was 15 %:
+a large loss late in the burn leaves the stage slower than planned at the
+gate, below which the guidance asks for less braking than the engine's
+minimum throttle gives, and the engine is cut and relit; the touchdown itself
+stays soft. The static margin, the loss that the thrust of the rest of the
+burn leaves room for, is 30 %: the rest is spent because after the loss the
+stage falls behind its plan, and the required deceleration grows like $`u/z`$
+as it approaches the ground. The edge of success is ragged rather than a
+clean band, so a single number for the thrust margin would overstate what is
+known.
 
 ![Sensor faults](figures/failures_sensors.png)
 
 | Altimeter bias | −20 m | −2 m | −0.5 m | 0 | +0.1 m | +0.25 m | +1 m | +10 m |
 |---|---|---|---|---|---|---|---|---|
-| touchdown speed | 1.10 m/s | 1.36 m/s | 1.25 m/s | 1.20 m/s | 1.82 m/s | 2.61 m/s | 4.92 m/s | 15.3 m/s |
-| ignitions | 89 | 11 | 4 | 1 | 1 | 1 | 1 | 1 |
+| touchdown speed | 1.16 m/s | 1.12 m/s | 1.13 m/s | 1.12 m/s | 1.56 m/s | 2.14 m/s | 3.91 m/s | 14.8 m/s |
+| ignitions | 124 | 13 | 4 | 1 | 1 | 1 | 1 | 1 |
+| without the gate | 1.10 m/s, 89 | 1.36 m/s, 11 | 1.25 m/s, 4 | 1.20 m/s | 1.82 m/s | 2.61 m/s | 4.92 m/s | 15.3 m/s |
 
-A positive bias follows the closed form within 1 %: the guidance has no
-altitude margin at all, and the altimeter must be good to about 0.1 m at the
-end of the descent. A negative bias lands softly, but by switching the engine
-on and off, 4 times for half a metre and 89 times for 20 m, burning 1500 kg of
-extra propellant; a real engine allows a handful of relights at most.
+A positive bias follows the closed form within 1 %. Without the gate the
+guidance had no altitude margin at all, and 0.13 m of bias was enough to fail;
+with it, 0.21 m. The gate cannot do much better, because the deceleration of
+the last metres cannot go below what the engine gives at minimum throttle. A
+negative bias lands softly, but by switching the engine on and off, 4 times
+for half a metre and 124 times for 20 m, burning 1550 kg of extra propellant;
+a real engine allows a handful of relights at most, and the gate does not
+help here.
 
 A drift $`b`$ of the measured lateral velocity moves the touchdown point by
-about 160 m per m/s² without the observer and 186 m per m/s² with it, so the
-requirement of 10 m holds up to 0.054 m/s² with the observer (5.5 mg if the
+about 161 m per m/s² without the observer and 188 m per m/s² with it, so the
+requirement of 10 m holds up to 0.053 m/s² with the observer (5.4 mg if the
 drift comes from an accelerometer bias). The miss comes mostly from the
 lateral law itself: it takes the false velocity $`b\,t`$ for a real drift and
 steers against it until the position error balances it,
@@ -622,12 +658,16 @@ lateral law itself makes on the same measurement. The tilt limit still clips
 its correction in the hardest cases.
 
 The failure study moves the weak point from the controllers to the
-measurements. The guidance tolerates thrust errors well, 15 % lost at any
-time, because it is in feedback, but the same feedback trusts the altitude
-completely: aiming at 1 m/s exactly at $`z = 0`$ leaves no room for an altimeter
-error of more than 0.13 m. Aiming at a gate a few metres above the ground and
-descending the rest at constant speed, as real landers do, would buy that
-margin with a little propellant.
+measurements. The guidance tolerates thrust errors well because it is in
+feedback, but the same feedback trusts the altitude completely: aiming at
+1 m/s exactly at $`z = 0`$ left no room for an altimeter error of more than
+0.13 m. The remedy real landers use, a final descent at constant speed, is not
+available to an engine that cannot throttle down to hover; the terminal gate
+gets what the minimum throttle allows, 0.21 m, at the price of 23 kg of
+propellant and of the worst-case thrust loss dropping from 15 to 10 %. That
+trade was measured for three gate decelerations before choosing one, and the
+first choice, 5 m/s², was rejected because it relit the engine. Below about
+0.2 m the altimeter itself has to be good enough.
 
 The model leaves out:
 
@@ -758,7 +798,7 @@ runtests('tests')
   above the remaining fraction of $`T_{max}`$; a missing or inverted loss
   fails the second. An altimeter reading 1 m high, inside the terminal gate,
   hits the ground at the closed-form $`\sqrt{u_t^2 + 2a_g h_b}`$ within 5 %,
-  one reading 0.25 m high still lands under 2 m/s, one reading 10 m low
+  one reading 0.15 m high still lands under 2 m/s, one reading 10 m low
   relights the engine, and a 0.1 m/s² drift of the measured $`\dot x`$ misses
   the pad, more with the observer than without; a flipped bias, the
   guidance integral left running below the gate, or the guidance, the
