@@ -669,7 +669,7 @@ From the repository root in MATLAB:
 
 ```matlab
 run_all              % regenerate every study and figure (about 13 minutes)
-runtests('tests')    % the 33 tests
+runtests('tests')    % the 34 tests
 ```
 
 | Script | What it does |
@@ -732,7 +732,7 @@ once.
 runtests('tests')
 ```
 
-33 tests pin the invariants that would catch a silent error:
+34 tests pin the invariants that would catch a silent error:
 
 - **TestPlantVertical** (2): free fall and constant thrust against the rocket
   equation; a wrong gravity sign fails both.
@@ -753,15 +753,16 @@ runtests('tests')
   With a 15 m/s wind, a thrust 5 % low and $`C_D = 1.2`$, the stage lands
   drifting faster than 1 m/s with the observer off and meets every
   requirement with it on; a flipped sign of $`\hat d`$ fails the second.
-- **TestFailures** (5): 10 s into the burn, a 15 % thrust loss still meets
+- **TestFailures** (6): 10 s into the burn, a 15 % thrust loss still meets
   every requirement and a 30 % loss crashes, with the applied thrust never
   above the remaining fraction of $`T_{max}`$; a missing or inverted loss
-  fails the second. An altimeter reading 10 m high hits the ground at the
-  closed-form $`\sqrt{u_t^2 + 2a^*h_b}`$ within 5 %, one reading 10 m low
+  fails the second. An altimeter reading 1 m high, inside the terminal gate,
+  hits the ground at the closed-form $`\sqrt{u_t^2 + 2a_g h_b}`$ within 5 %,
+  one reading 0.25 m high still lands under 2 m/s, one reading 10 m low
   relights the engine, and a 0.1 m/s² drift of the measured $`\dot x`$ misses
-  the pad, more with the observer than without; a flipped bias, or the
-  guidance, the lateral law or the observer reading the true state, fails
-  one of them.
+  the pad, more with the observer than without; a flipped bias, the
+  guidance integral left running below the gate, or the guidance, the
+  lateral law or the observer reading the true state, fails one of them.
 
 ## Roadmap
 

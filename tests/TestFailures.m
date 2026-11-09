@@ -8,8 +8,12 @@ classdef TestFailures < matlab.unittest.TestCase
 %                           throttle margin, so the stage crashes; the
 %                           thrust after the failure never exceeds
 %                           70 % of Tmax, which pins the injection itself.
-%   altimeterReadsHigh      +10 m bias: the guidance plans to stop 10 m
-%                           below the ground and hits it at about 15 m/s.
+%   altimeterReadsHigh      +1 m bias, inside the terminal gate: the stage
+%                           meets the ground still at
+%                           sqrt(vTouch^2 + 2*aGate*1), 3.3 m/s.
+%   gateToleratesBias       +0.25 m bias: within the 0.30 m the gate
+%                           tolerates, the touchdown meets the requirement
+%                           (2.6 m/s without the gate).
 %   altimeterReadsLow       -10 m bias: the stage stops above the ground
 %                           and the engine has to relight.
 %   velocityDrift           0.1 m/s^2 drift of the measured vx: the
@@ -68,13 +72,23 @@ classdef TestFailures < matlab.unittest.TestCase
         end
 
         function altimeterReadsHigh(tc)
-            % Reference model: impact at 15.3 m/s, the estimate
-            % sqrt(vTouch^2 + 2*aStar*10) gives 15.3 m/s.
+            % Reference model: impact at 3.34 m/s against 3.32 m/s from
+            % the closed form (4.92 m/s without the gate).
             p = params();
-            p.fail.zBias = 10;
+            p.fail.zBias = 1;
             s = tc.simulate(p);
             tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
-            tc.verifyEqual(abs(s.vz(end)), sqrt(p.vTouch^2 + 2*p.aStar*10), 'RelTol', 0.05);
+            tc.verifyEqual(abs(s.vz(end)), sqrt(p.vTouch^2 + 2*p.aGate*1), 'RelTol', 0.05);
+        end
+
+        function gateToleratesBias(tc)
+            % Reference model: 1.74 m/s with a 0.2 m bias, 2.01 at 0.3 m.
+            p = params();
+            p.fail.zBias = 0.25;
+            s = tc.simulate(p);
+            tc.assertLessThan(s.t(end), 120, 'No touchdown within 120 s.');
+            tc.verifyLessThan(abs(s.vz(end)), p.req.vz);
+            tc.verifyEqual(sum(diff(s.T > 0) > 0), 1, 'The engine must light exactly once.');
         end
 
         function altimeterReadsLow(tc)
